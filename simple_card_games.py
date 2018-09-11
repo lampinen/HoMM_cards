@@ -1,10 +1,5 @@
 import numpy as np
 
-class card(object):
-    pass
-
-class hand(object):
-    pass
 
 class card_game(object):
     """Class for creating simple card games which have 4 card values and 2 
