@@ -8,12 +8,13 @@ class hand(object):
 
 class card_game(object):
     """Class for creating simple card games which have 4 card values and 2 
-    suits, and a ranking of (two card) hands, such that your probability of
-    winning is always proportional to how high in the hand ranking your hand is.
+    suits (red and black), and a ranking of (two card) hands, such that your 
+    probability of winning is always proportional to how high in the hand
+    ranking your hand is.
 
     On each turn, the player (agent) bets either 0, 1, or 2, and wins or loses
-    that amount if the win/lose the hand (i.e. the reward is +/- the amount
-    bet.
+    that amount if they win or lose the hand (i.e. the reward is +/- the amount
+    bet).
 
     There are several game types:
         high_card: highest card wins
@@ -35,48 +36,51 @@ class card_game(object):
     If losers is True, the game is reversed so that hands that would have won
     instead lose an equal amount, and vice versa."""
     def __init__(self, game_type, black_valuable=True, suits_rule=False,
-                 losers=False)
+                 losers=False):
         self.black_valuable = black_valuable
         self.suits_rule = suits_rule
+        suit_mult = 0.5 if not suits_rule else 4
         self.losers = losers
-        self.cards = [(suit, value) for suit in range(2) for value in range(4)] 
-        self.hands = [(c1, c2) for c1 in cards for c2 in cards]
-
-        if suits_rule:
-            raise NotImplementedError("Come on dude")
+        self.cards = [(value, suit) for suit in range(2) for value in range(4)] 
+        self.hands = [(c1, c2) for c1 in self.cards for c2 in self.cards]
 
         def suit_val(card):
-            return 0.5 * card[1] if black_valuable else  0.5 * (1-card[1])
+            return suit_mult * card[1] if black_valuable else suit_mult * (1-card[1])
+
+        def high_card_value(hand):
+            if hand[0][0] == hand[1][0]:
+                return hand[0][0] + 0.5*(suit_val(hand[0]) + suit_val(hand[1])) + 0.01 * (hand[1][0])
+            else:
+                index = 0 if hand[0][0] > hand[1][0] else 1 
+                high_card = hand[index]
+                other_card = hand[1-index]
+                return high_card[0] + suit_val(high_card) + 0.01 * (other_card[0] + suit_val(other_card))
             
-        if game_type == "high":
-            def key(hand):
-                index = np.argmax([c[0] for c in hand])
-                high_card = c[index]
-                return high_card[0] + suit_val(high_card) 
+            
+        if game_type == "high_card":
+            key = high_card_value
         elif game_type == "match":
             def key(hand):
                 val_d = hand[0][0] - hand[1][0] 
                 suit_d = hand[0][1] - hand[1][1] 
-                return val_d + 0.5 * suit_d 
-        elif game_type == "pairs_and_high":
+                tie_break = (hand[0][0] + hand[1][0] + suit_val(hand[0]) + suit_val(hand[1]))
+                return -np.abs(val_d) - 0.5 * np.abs(suit_d) + 0.01 * tie_break 
+        elif game_type == "pairs_and_high": 
             def key(hand):
                 c0, c1 = hand
                 if c0[0] == c1[0]:
-                    return 4 + 4 * (c0[1] == c1[1]) + c0[0] + 0.5 * (suit_val(c0) + suit_val(c1)) 
- 
+                    return 5 + c0[0] + 0.5 * (c0[1] == c1[1])  + 0.01 * (suit_val(c0) + suit_val(c1))
                 else:
-                    index = np.argmax([c[0] for c in hand])
-                    high_card = c[index]
-                    return high_card[0] + 0.5 *suit_val(high_card) 
+                    return high_card_value(hand) 
         elif game_type == "straight_flush":
             def key(hand):
                 c0, c1 = hand
-                index = np.argmax([c[0] for c in hand])
-                high_card = c[index]
                 if np.abs(c0[0]-c1[0]) == 1:
-                    return 4 + 4 * (c0[1] == c1[1]) + high_card[0] + suit_val(high_card) 
+                    index = 0 if hand[0][0] > hand[1][0] else 1 
+                    high_card = hand[index]
+                    return 5 + 5 * (c0[1] == c1[1]) + high_card[0] + suit_val(high_card) 
                 else:
-                    return high_card[0] + 0.5 *suit_val(high_card) 
+                    return high_card_value(hand) 
         elif game_type == "sum_under":
             def key(hand):
                 c0, c1 = hand
@@ -88,22 +92,33 @@ class card_game(object):
         else:
             raise ValueError("Unrecognized game type: " + game_type)
                                                 
-        self.sory_key = key
+
+        if losers:
+            self.sort_key = lambda x: -key(x) 
+        else:
+            self.sort_key = key
         self.hands.sort(key=self.sort_key)
-        num_hands = len(self.hands)
-        self.hand_to_win_prob = {hand: (float(i)+1)/num_hands for i, hand in enumerate(self.hands)}
+        self.num_hands = num_hands = len(self.hands)
+        self.hand_to_win_prob = {}
+
+        for i, hand in enumerate(self.hands):
+            # j handles tied values
+            this_val = self.sort_key(hand)
+            for j in range(i+1, self.num_hands):
+                if self.sort_key(self.hands[j]) > this_val:
+                    self.hand_to_win_prob[hand] =  (float(j))/num_hands
+                    break
+            else:
+                self.hand_to_win_prob[hand] = 1.0 
 
 
     def wins(self, hand):
         wp = self.hand_to_win_prob[hand]
-        if np.random.rand() <= wp:
-            return not self.losers
-        else:
-            return self.losers
+        return np.random.rand() <= wp
 
 
     def deal(self):
-        return np.random.choice(self.hands)
+        return self.hands[np.random.randint(self.num_hands)]
 
 
     def play(self, hand, bet):
@@ -113,5 +128,46 @@ class card_game(object):
             return -bet
             
         
+### simple tests
+if __name__ == "__main__":
+    game_types = ["high_card", "match", "pairs_and_high", "straight_flush", "sum_under"]
+    suits_rule = [True, False]
+    losers = [True, False]
+    black_valuable = [True, False]
 
+    print("testing each game")
+    for g in game_types:
+        print(g)
+        this_game = card_game(game_type=g)
+        print(this_game.hands)
+        print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+        
+    print("testing methods")
+    this_game = card_game(game_type="high_card")
+    for _ in range(5):
+        this_hand = this_game.deal()
+        print(this_hand)
+        print(this_game.hand_to_win_prob[this_hand])
+        print(this_game.play(this_hand, 2))
 
+    print("testing suits_rule")
+    this_game = card_game(game_type="high_card", suits_rule=True)
+    print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+
+    print("testing losers")
+    this_game = card_game(game_type="high_card", losers=True)
+    print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+
+    print("testing black_valuable=False")
+    this_game = card_game(game_type="high_card", black_valuable=False)
+    print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+
+    print("all 3")
+    this_game = card_game(game_type="high_card", black_valuable=False,
+                          suits_rule=True, losers=True)
+    print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+
+    print("all 3 on sum under")
+    this_game = card_game(game_type="sum_under", black_valuable=False,
+                          suits_rule=True, losers=True)
+    print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
