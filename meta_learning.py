@@ -6,9 +6,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from copy import deepcopy
-from collections import deque
 
-import simple_card_games
+from simple_card_games import card_game
 from orthogonal_matrices import random_orthogonal
 
 pi = np.pi
@@ -50,7 +49,8 @@ config = {
     output_dir: "results/"
     save_every: 10 #20
 
-    ???meta_batch_size: 1024 # how much of each dataset the function embedding guesser sees 
+    memory_buffer_size: 1024 # How many memories of each task are stored/
+                             # how many meta-learner sees
     early_stopping_thresh: 0.005
     base_meta_tasks: ["is_" + g for g in game_types] + ["is_" + o for o in option_names]
     base_meta_mappings: ["toggle_" + o for o in option_names]
@@ -103,6 +103,26 @@ def _get_meta_pairings(base_tasks, meta_tasks, meta_mappings):
     return meta_pairings
 
 
+class memory_buffer(object):
+    """Essentially a wrapper around numpy arrays that handles inserting and
+    removing."""
+    def __init__(self, length, input_width, outcome_width):
+        self.length = length
+        self.curr_index = 0
+        self.input_buffer = np.zeros(length, input_width)
+        self.outcome_buffer = np.zeros(length, outcome_width)
+
+    def insert(self, input_vec, outcome_vec):
+        self.input_buffer[self.curr_index, :] = input_vec
+        self.outcome_buffer[self.curr_index, :] = outcome_vec
+        self.curr_index += 1
+        if self.curr_index >= self.length:
+            self.curr_index = 0
+
+    def get_memories(self): 
+        return self.input_buffer, self.output_buffer
+
+
 class meta_model(object):
     """A meta-learning model for RL on simple card games."""
     def __init__(self, base_tasks, new_tasks, base_meta_tasks,
@@ -116,19 +136,30 @@ class meta_model(object):
             new_meta_tasks: new meta tasks
             config: a config dict, see above
         """
-        self.num_input = num_input
-        self.num_output = num_output
+        self.config = config
+        self.memory_buffer_size = config["memory_buffer_size"]
+        self.game_types = config["game_types"]
+        self.num_input = config["num_input"]
+        self.num_output = config["num_output"]
+        self.num_outcome = config["num_outcome"]
 
         # base datasets / memory_buffers
         self.base_tasks = base_tasks
         self.base_task_names = [_stringify_game(t) for t in base_tasks]
-        self.base_buffers = [deque() for _ in base_tasks]
 
         # new datasets / memory_buffers
         self.new_tasks = new_tasks
         self.new_task_names = [_stringify_game(t) for t in new_tasks]
-        self.new_buffers = [deque() for _ in new_tasks]
 
+        self.all_base_tasks = self.base_tasks + self.new_tasks
+        self.memory_buffers = {t: memory_buffer(
+            self.memory_buffer_size, self.num_input,
+            self.num_outcome) for t in self.all_base_tasks}
+
+        self.games = {card_game(game_type=t["game"],
+                                black_valuabele=t["black_valuable"],
+                                suits_rule=t["suits_rule"],
+                                losers=t["losers"]) for t in self.all_base_tasks}
 
         self.base_meta_tasks = base_meta_tasks 
         self.base_meta_mappings = base_meta_mappings
@@ -328,41 +359,115 @@ class meta_model(object):
                                                self.meta_input_ph)
 
 
-???        self.loss = tf.cond(self.is_base_output,
-???            lambda: tf.nn.softmax_cross_entropy_with_logits(labels=target_one_hot, 
-???                                                            logits=mapped_output),
-???            lambda: tf.reduce_sum(tf.square(self.raw_output - processed_targets), axis=1))
-???        self.base_hard_loss = tf.cast(
-???            tf.logical_not(tf.equal(tf.argmax(target_one_hot, axis=-1),
-???                                    tf.argmax(mapped_output, axis=-1))),
-???                           tf.float32)
-???
-???        self.total_loss = tf.reduce_mean(self.loss)
-???        self.total_base_hard_loss = tf.reduce_mean(self.base_hard_loss)
-???        #base_full_optimizer = tf.train.MomentumOptimizer(self.lr_ph, train_momentum)
-???        base_full_optimizer = tf.train.RMSPropOptimizer(self.lr_ph)
-???        self.base_full_train = base_full_optimizer.minimize(self.total_loss)
-???
-???
-???        # initialize
-???        sess_config = tf.ConfigProto()
-???        sess_config.gpu_options.allow_growth = True
-???        self.sess = tf.Session(config=sess_config)
-???        self.sess.run(tf.global_variables_initializer())
-???        self.refresh_meta_dataset_cache()
-???        
-???    
-???#    def _guess_dataset(self, dataset):
-???#        return np.concatenate([dataset["x"], dataset["y"]],
-???#                              axis=1)
-???#
-???#    
-???    def _guess_mask(self, dataset_length):
-???        mask = np.zeros(dataset_length, dtype=np.bool)
-???        indices = np.random.permutation(dataset_length)[:meta_batch_size]
-???        mask[indices] = True
-???        return mask
-???
+        self.base_loss = tf.reduce_sum(
+            tf.square(self.base_output - processed_targets), axis=1)
+        self.total_base_loss = tf.reduce_mean(self.base_loss)
+
+        self.meta_t_loss = tf.reduce_sum(
+            tf.square(self.meta_t_output - processed_class), axis=1)
+        self.total_meta_t_loss = tf.reduce_mean(self.meta_t_loss)
+
+        self.meta_m_loss = tf.reduce_sum(
+            tf.square(self.meta_m_output - self.meta_target_ph), axis=1)
+        self.total_meta_m_loss = tf.reduce_mean(self.meta_m_loss)
+
+
+        optimizer = tf.train.RMSPropOptimizer(self.lr_ph)
+
+        self.base_train = optimizer.minimize(self.total_base_loss)
+        self.meta_classification_train = optimizer.minimize(self.total_meta_classification_loss)
+        self.meta_mapping_train = optimizer.minimize(self.total_meta_mapping_loss)
+
+        # initialize
+        sess_config = tf.ConfigProto()
+        sess_config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=sess_config)
+        self.sess.run(tf.global_variables_initializer())
+        self.refresh_meta_dataset_cache()
+
+
+    def encode_game(task):
+        """Takes a task dict, returns vector appropriate for input to graph."""
+        vec = np.zeros(11)
+        game_type = t["game"],
+        black_valuabele = t["black_valuable"]
+        suits_rule = t["suits_rule"]
+        losers = t["losers"]
+        vec[self.game_types.index(game_type)] = 1. 
+        if black_valuable:
+            vec[5] == 1.
+        else:
+            vec[6] == 1.
+        if suits_rule:
+            vec[7] == 1.
+        else:
+            vec[8] == 1.
+        if losers:
+            vec[9] == 1.
+        else:
+            vec[10] == 1.
+
+        return vec
+
+
+    def encode_hand(hand):
+        """Takes a hand tuple, returns vector appropriate for input to graph"""
+        vec = np.zeros(12)
+        def _card_to_vec(c):
+            vec = np.zeros(6)
+            vec[c[0]] = 1.
+            vec[c[1] + 4] = 1.
+
+        vec[:6] = _card_to_vec[hand[0]]
+        vec[6:] = _card_to_vec[hand[1]]
+        return vec
+
+
+    def encode_outcome(self, action, reward):
+        """Takes an action and reward, returns vector appropriate for input to
+        graph"""
+        vec = np.zeros(4)
+        vec[action] = 1.
+        vec[-1] = reward
+        return vec
+
+
+    def play_hand(self, encoded_hand, encoded_game, memory_buffer, epsilon=0.):
+        """Plays the provided hand conditioned on the game and memory buffer,
+        with epsilon-greedy exploration."""
+        #TODO:
+        feed_dict = {
+            
+            }
+
+
+    def play_games(self, num_turns=1, include_new=False, epsilon=epsilon)
+        """Plays turns games in base_tasks (and new if include_new), to add new
+        experiences to memory buffers."""
+        if include_new:
+            this_tasks = self.all_base_tasks
+        else: 
+            this_tasks = self.base_tasks
+        for t in this_tasks:
+            game = self.games[t]
+            encoded_game = self.encode_game(t)
+            buff = self.memory_buffers[t]
+            for turn in range(num_turns):
+                hand = game.deal()
+                encoded_hand = self.encode_hand(hand)
+                (a, r) = self.play_hand(encoded_hand, encoded_game, buff,
+                                        epsilon=epsilon) 
+                encoded_outcome = self.encode_outcome(a, r)
+                buff.insert(encoded_hand, encoded_outcome)
+
+
+    def _guess_mask(self, dataset_length):
+        mask = np.zeros(dataset_length, dtype=np.bool)
+        indices = np.random.permutation(dataset_length)[:meta_batch_size]
+        mask[indices] = True
+        return mask
+
+
 ???    def dataset_eval(self, dataset, zeros=False, base_input=True, base_output=True):
 ???        this_feed_dict = {
 ???            self.base_input_ph: dataset["x"] if base_input else self.dummy_base_input,
