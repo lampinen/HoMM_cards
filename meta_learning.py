@@ -20,9 +20,11 @@ config = {
     losers: [True, False]
     black_valuable: [True, False]
 
-    num_input: (4 + 2) * 2 + (5 + 2 + 2 + 2) # (4 values + 2 suits) * 2 card hand
-                                              # + 5 games + 3 binary options
+    num_input: (4 + 2) * 2 + (5 + 2 + 2 + 2) # (4 values + 2 suits) * 2 cards
+                                             # + 5 games + 3 binary options
     num_output: 3 # bet 0, bet 1, bet 2 
+    num_outcome: (3 + 1) + (5 + 2 + 2 + 2) # 3 possible bets (actions) + reward
+                                           # + 5 games + 3 binary options
     num_hidden: 64
     num_hidden_hyper: 64
 
@@ -153,24 +155,43 @@ class meta_model(object):
         # base task input
         input_size = num_input 
         self.base_input_ph = tf.placeholder(tf.float32, shape=[None, input_size])
+        self.base_outcome_ph = tf.placeholder(tf.float32, shape=[None, outcome_size])
         self.base_target_ph = tf.placeholder(tf.float32, shape=[None, output_size])
         self.lr_ph = tf.placeholder(tf.float32)
 
         input_processing_1 = slim.fully_connected(self.base_input_ph, num_hidden, 
                                                   activation_fn=internal_nonlinearity) 
 
-        processed_input = slim.fully_connected(input_processing_1, num_hidden_hyper, 
+        input_processing_2 = slim.fully_connected(input_processing_1, num_hidden, 
+                                                  activation_fn=internal_nonlinearity) 
+
+        processed_input = slim.fully_connected(input_processing_2, num_hidden_hyper, 
                                                activation_fn=internal_nonlinearity) 
 
         all_target_processor_nontf = random_orthogonal(num_hidden_hyper)[:, :num_output + 1]
         self.target_processor_nontf = all_target_processor_nontf[:, :num_output]
-        self.target_processor = tf.constant(self.target_processor_nontf, dtype=tf.float32)
+        self.target_processor = tf.get_variable('target_processor', 
+                                                shape=[num_hidden_hyper, num_output],
+                                                initializer=tf.constant_initializer(self.target_processor_nontf))
         processed_targets = tf.matmul(self.base_target_ph, tf.transpose(self.target_processor)) 
 
-        def output_mapping(X):
+        def _output_mapping(X):
             """hidden space mapped back to T/F output logits"""
             res = tf.matmul(X, self.target_processor)
             return res
+
+        def _outcome_encoder(outcome_ph, reuse=True):
+            """Outcomes mapped to hidden space"""
+            with tf.variable_scope('outcome_encoder', reuse=reuse):
+                oh_1 = slim.fully_connected(outcome_ph, num_hidden_hyper,
+                                            activation_fn=internal_nonlinearity)
+                oh_2 = slim.fully_connected(oh_1, num_hidden_hyper,
+                                            activation_fn=internal_nonlinearity)
+                res = slim.fully_connected(oh_2, num_hidden_hyper,
+                                            activation_fn=internal_nonlinearity)
+            return res
+
+        processed_outcomes = _outcome_encoder(self.base_outcome_ph)
 
         # meta task input
         self.meta_input_ph = tf.placeholder(tf.float32, shape=[None, num_hidden_hyper])
@@ -216,7 +237,7 @@ class meta_model(object):
                 return guess_embedding
 
         self.guess_base_function_emb = _meta_network(processed_input,
-                                                     processed_targets,
+                                                     processed_outcomes,
                                                      reuse=False)
 
         self.guess_meta_t_function_emb = _meta_network(self.meta_input_ph,
@@ -297,7 +318,7 @@ class meta_model(object):
 
         self.base_raw_output = _task_network(self.base_task_params,
                                              processed_input)
-        self.base_output = output_mapping(self.base_raw_output)
+        self.base_output = _output_mapping(self.base_raw_output)
 
         self.meta_t_raw_output = _task_network(self.meta_t_task_params,
                                                self.meta_input_ph)
