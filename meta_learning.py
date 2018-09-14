@@ -512,16 +512,42 @@ class meta_model(object):
         return mask
 
 
+    def _outcomes_to_targets(self, encoded_outcomes):
+        num = len(encoded_outcomes)
+        targets = np.zeros([num, 3]) 
+        mask = np.zeros_like(targets, dtype=np.bool) 
+        inds = encoded_outcomes[:, :3].astype(np.bool)
+        targets[encoded_outcomes[:, :3].astype(np.bool)] = encoded_outcomes[:, -1]
+        mask[encoded_outcomes[:, :3].astype(np.bool)] = 1. 
+        return targets, mask
+
+
     def base_train_step(self, memory_buffer, lr):
         input_buff, output_buff, _ = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
             self.base_input_ph: input_buffer, :],
             self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
             self.base_outcome_ph: output_buffer,
-            self.base_target_ph: ,
-            self.base_target_mask_ph: ,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask,
+            self.lr_ph = lr
         }
-        act_probs = self.sess.run(self.base_output_softmax, feed_dict=feed_dict)
+        self.sess.run(self.base_train, feed_dict=feed_dict)
+
+
+    def base_loss_eval_step(self, memory_buffer):
+        input_buff, output_buff, _ = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.base_input_ph: input_buffer, :],
+            self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
+            self.base_outcome_ph: output_buffer,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask,
+        }
+        loss = self.sess.run(self.base_total_loss, feed_dict=feed_dict)
+        return loss
 
 
 ???    def dataset_eval(self, dataset, zeros=False, base_input=True, base_output=True):
