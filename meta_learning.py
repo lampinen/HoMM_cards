@@ -13,57 +13,60 @@ from orthogonal_matrices import random_orthogonal
 pi = np.pi
 ### Parameters #################################################
 config = {
-    game_types: ["high_card", "match", "pairs_and_high", "straight_flush", "sum_under"]
-    option_names: ["suits_rule", "losers", "black_valuable"]
-    suits_rule: [True, False]
-    losers: [True, False]
-    black_valuable: [True, False]
+    game_types: ["high_card", "match", "pairs_and_high", "straight_flush", "sum_under"],
+    option_names: ["suits_rule", "losers", "black_valuable"],
+    suits_rule: [True, False],
+    losers: [True, False],
+    black_valuable: [True, False],
 
-    num_input: (4 + 2) * 2 + (5 + 2 + 2 + 2) # (4 values + 2 suits) * 2 cards
+    bets = [0, 1, 2],
+
+    num_input: (4 + 2) * 2 + (5 + 2 + 2 + 2), # (4 values + 2 suits) * 2 cards
                                              # + 5 games + 3 binary options
     num_output: 3 # bet 0, bet 1, bet 2 
-    num_outcome: (3 + 1) + (5 + 2 + 2 + 2) # 3 possible bets (actions) + reward
+    num_outcome: (3 + 1) + (5 + 2 + 2 + 2), # 3 possible bets (actions) + reward
                                            # + 5 games + 3 binary options
-    num_hidden: 64
-    num_hidden_hyper: 64
+    num_hidden: 64,
+    num_hidden_hyper: 64,
 
-    init_learning_rate: 1e-4
-    init_meta_learning_rate: 2e-4
+    init_learning_rate: 1e-4,
+    init_meta_learning_rate: 2e-4,
 
-    new_init_learning_rate: 1e-6
-    new_init_meta_learning_rate: 1e-6
+    new_init_learning_rate: 1e-6,
+    new_init_meta_learning_rate: 1e-6,
 
-    lr_decay: 0.85
-    meta_lr_decay: 0.85
+    lr_decay: 0.85,
+    meta_lr_decay: 0.85,
 
-    lr_decays_every: 100
-    min_learning_rate: 1e-6
+    lr_decays_every: 100,
+    min_learning_rate: 1e-6,
 
-    refresh_meta_cache_every: 1 # how many epochs between updates to meta_dataset_cache
+    refresh_meta_cache_every: 1, # how many epochs between updates to meta_dataset_cache
 
-    max_base_epochs: 4000 
-    max_new_epochs: 200
-    num_task_hidden_layers: 3
-    num_hyper_hidden_layers: 3
+    max_base_epochs: 4000 ,
+    max_new_epochs: 200,
+    num_task_hidden_layers: 3,
+    num_hyper_hidden_layers: 3,
 
-    output_dir: "results/"
-    save_every: 10 #20
+    output_dir: "results/",
+    save_every: 10, 
 
-    memory_buffer_size: 1024 # How many memories of each task are stored/
-                             # how many meta-learner sees
-    early_stopping_thresh: 0.005
-    base_meta_tasks: ["is_" + g for g in game_types] + ["is_" + o for o in option_names]
-    base_meta_mappings: ["toggle_" + o for o in option_names]
+    memory_buffer_size: 1024, # How many memories of each task are stored
+    meta_batch_size: 768, # how many meta-learner sees
+    early_stopping_thresh: 0.005,
+    base_meta_tasks: ["is_" + g for g in game_types] + ["is_" + o for o in option_names],
+    base_meta_mappings: ["toggle_" + o for o in option_names],
 
     new_tasks: [{"game": "straight_flush", "losers": True,
-                  "black_valuable": True, "suits_rule": False}] # will be removed
-                                                                # from base tasks
+                  "black_valuable": True, "suits_rule": False}], # will be removed
+                                                                 # from base tasks
     base_tasks: [{"game": g, "losers": l, "black_valuable": b,
-                   "suits_rule": s} for g in game_types for l in losers for b in black_valuable for s in suits_rule]
-    base_tasks: [t for t in base_tasks if t not in new_tasks] # omit new
+                   "suits_rule": s} for g in game_types for l in losers for b in black_valuable for s in suits_rule],
+    base_tasks: [t for t in base_tasks if t not in new_tasks], # omit new
 
-    internal_nonlinearity: tf.nn.leaky_relu
-    output_nonlinearity: None}
+    internal_nonlinearity: tf.nn.leaky_relu,
+    output_nonlinearity: None
+}
 ### END PARAMATERS (finally) ##################################
 
 def _stringify_game(t):
@@ -107,17 +110,31 @@ class memory_buffer(object):
     """Essentially a wrapper around numpy arrays that handles inserting and
     removing."""
     def __init__(self, length, input_width, outcome_width):
-        self.length = length
-        self.curr_index = 0
+        self.length = length 
+        self.curr_index = 0 
         self.input_buffer = np.zeros(length, input_width)
         self.outcome_buffer = np.zeros(length, outcome_width)
 
-    def insert(self, input_vec, outcome_vec):
-        self.input_buffer[self.curr_index, :] = input_vec
-        self.outcome_buffer[self.curr_index, :] = outcome_vec
-        self.curr_index += 1
-        if self.curr_index >= self.length:
-            self.curr_index = 0
+    def insert(self, input_mat, outcome_mat):
+        num_events = len(input_mat)
+        if num_events > self.length:
+            num_events = length
+            self.input_buffer = input_mat[-length:, :]
+            self.outcome_buffer = outcome_mat[-length:, :]
+            self.curr_index = 0.
+            return
+        end_offset = num_events + self.curr_index
+        if end_offset > self.length: 
+            back_off = self.length - end_offset
+            num_to_end = self.num_events + back_off
+            self.input_buffer[:-back_off, :] = input_mat[num_to_end:, :] 
+            self.outcome_buffer[:-back_off, :] = outcome_mat[num_to_end:, :] 
+        else: 
+            back_off = end_offset
+            num_to_end = num_events
+        self.input_buffer[self.curr_index:back_off, :] = input_mat[:num_to_end, :] 
+        self.outcome_buffer[self.curr_index:back_off, :] = outcome_mat[:num_to_end, :] 
+        self.curr_index = np.abs(back_off)
 
     def get_memories(self): 
         return self.input_buffer, self.output_buffer
@@ -138,10 +155,12 @@ class meta_model(object):
         """
         self.config = config
         self.memory_buffer_size = config["memory_buffer_size"]
+        self.meta_batch_size = config["meta_batch_size"]
         self.game_types = config["game_types"]
         self.num_input = config["num_input"]
         self.num_output = config["num_output"]
         self.num_outcome = config["num_outcome"]
+        self.bets = config["bets"]
 
         # base datasets / memory_buffers
         self.base_tasks = base_tasks
@@ -185,9 +204,13 @@ class meta_model(object):
 
         # base task input
         input_size = num_input 
-        self.base_input_ph = tf.placeholder(tf.float32, shape=[None, input_size])
-        self.base_outcome_ph = tf.placeholder(tf.float32, shape=[None, outcome_size])
-        self.base_target_ph = tf.placeholder(tf.float32, shape=[None, output_size])
+        self.base_input_ph = tf.placeholder(
+            tf.float32, shape=[None, input_size])
+        self.base_outcome_ph = tf.placeholder(
+            tf.float32, shape=[None, outcome_size])
+        self.base_target_ph = tf.placeholder(
+            tf.float32, shape=[None, output_size])
+
         self.lr_ph = tf.placeholder(tf.float32)
 
         input_processing_1 = slim.fully_connected(self.base_input_ph, num_hidden, 
@@ -345,11 +368,11 @@ class meta_model(object):
             raw_output = tf.matmul(task_hidden, hweights[-1]) + hbiases[-1]
 
             return raw_output
-            
 
         self.base_raw_output = _task_network(self.base_task_params,
                                              processed_input)
         self.base_output = _output_mapping(self.base_raw_output)
+        self.base_output_softmax = tf.nn.softmax(self.base_output)
 
         self.meta_t_raw_output = _task_network(self.meta_t_task_params,
                                                self.meta_input_ph)
@@ -358,9 +381,17 @@ class meta_model(object):
         self.meta_m_output = _task_network(self.meta_m_task_params,
                                                self.meta_input_ph)
 
+        # have to mask base output because can only learn about the action 
+        # actually taken
+        self.base_target_mask_ph = tf.placeholder(
+            tf.bool, shape=[None, output_size])
+        masked_base_output = tf.boolean_mask(base_output,
+                                             self.base_target_mask_ph)
+        masked_base_target = tf.boolean_mask(processed_targets,
+                                             self.base_target_mask_ph)
 
         self.base_loss = tf.reduce_sum(
-            tf.square(self.base_output - processed_targets), axis=1)
+            tf.square(masked_base_output - masked_base_target), axis=1)
         self.total_base_loss = tf.reduce_mean(self.base_loss)
 
         self.meta_t_loss = tf.reduce_sum(
@@ -423,23 +454,32 @@ class meta_model(object):
         return vec
 
 
-    def encode_outcome(self, action, reward):
-        """Takes an action and reward, returns vector appropriate for input to
+    def encode_outcomes(self, actions, rewards):
+        """Takes actions and rewards, returns matrix appropriate for input to
         graph"""
-        vec = np.zeros(4)
-        vec[action] = 1.
-        vec[-1] = reward
-        return vec
+        mat = np.zeros(len(actions), 4)
+        mat[range(len(actions)), actions] = 1.
+        mat[:, -1] = rewards
+        return mat
 
 
-    def play_hand(self, encoded_hand, encoded_game, memory_buffer, epsilon=0.):
+    def play_hands(self, encoded_hands, encoded_games, memory_buffer, epsilon=0.):
         """Plays the provided hand conditioned on the game and memory buffer,
         with epsilon-greedy exploration."""
-        #TODO:
+        if epsilon == 1.: # makes it easier to fill buffers before play begins
+            return np.random.randint(3, size=[len(encoded_hands), 3])
+        input_buff, outcome_buff = memory_buffer.get_memories()
         feed_dict = {
-            
-            }
-
+            self.base_input_ph: input_buffer,
+            self.guess_input_mask_ph: buff_mask,
+            self.base_outcome_ph: outcome_buffer
+        }
+        act_probs = self.sess.run(self.base_output_softmax,
+                                  feed_dict=feed_dict)[0]
+        actions = [np.random.choice(
+            range(3), p=act_probs[i, :]) for i in range(len(act_probs))]
+        return action
+        
 
     def play_games(self, num_turns=1, include_new=False, epsilon=epsilon)
         """Plays turns games in base_tasks (and new if include_new), to add new
@@ -452,20 +492,36 @@ class meta_model(object):
             game = self.games[t]
             encoded_game = self.encode_game(t)
             buff = self.memory_buffers[t]
+            encoded_games = np.tile(encoded_game, [num_turns, 1])
+            encoded_hands = np.zeros([num_turns, 12])
             for turn in range(num_turns):
                 hand = game.deal()
-                encoded_hand = self.encode_hand(hand)
-                (a, r) = self.play_hand(encoded_hand, encoded_game, buff,
-                                        epsilon=epsilon) 
-                encoded_outcome = self.encode_outcome(a, r)
-                buff.insert(encoded_hand, encoded_outcome)
+                encoded_hands[turn, :] = self.encode_hand(hand)
+            acts = self.play_hands(encoded_hands, encoded_games, buff,
+                                   epsilon=epsilon) 
+            bets = [self.bets[a] for a in acts] 
+            rs = [game.play(hand, self.bets[a]) for a in acts]
+            encoded_outcome = self.encode_outcomes(acts, rs)
+            buff.insert(encoded_hands, encoded_outcomes)
 
 
-    def _guess_mask(self, dataset_length):
+    def _random_guess_mask(self, dataset_length):
         mask = np.zeros(dataset_length, dtype=np.bool)
         indices = np.random.permutation(dataset_length)[:meta_batch_size]
         mask[indices] = True
         return mask
+
+
+    def base_train_step(self, memory_buffer, lr):
+        input_buff, output_buff, _ = memory_buffer.get_memories()
+        feed_dict = {
+            self.base_input_ph: input_buffer, :],
+            self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
+            self.base_outcome_ph: output_buffer,
+            self.base_target_ph: ,
+            self.base_target_mask_ph: ,
+        }
+        act_probs = self.sess.run(self.base_output_softmax, feed_dict=feed_dict)
 
 
 ???    def dataset_eval(self, dataset, zeros=False, base_input=True, base_output=True):
