@@ -374,6 +374,12 @@ class meta_model(object):
         self.base_output = _output_mapping(self.base_raw_output)
         self.base_output_softmax = tf.nn.softmax(self.base_output)
 
+        self.base_raw_output_fed_emb = _task_network(self.fed_emb_task_params,
+                                                     processed_input)
+        self.base_output_fed_emb = _output_mapping(self.base_raw_output_fed_emb)
+        self.base_output_fed_emb_softmax = tf.nn.softmax(
+            self.base_output_fed_emb)
+
         self.meta_t_raw_output = _task_network(self.meta_t_task_params,
                                                self.meta_input_ph)
         self.meta_t_output = tf.nn.sigmoid(self.meta_t_raw_output)
@@ -387,12 +393,18 @@ class meta_model(object):
             tf.bool, shape=[None, output_size])
         masked_base_output = tf.boolean_mask(base_output,
                                              self.base_target_mask_ph)
+        masked_base_fed_emb_output = tf.boolean_mask(base_output_fed_emb,
+                                                     self.base_target_mask_ph)
         masked_base_target = tf.boolean_mask(processed_targets,
                                              self.base_target_mask_ph)
 
         self.base_loss = tf.reduce_sum(
             tf.square(masked_base_output - masked_base_target), axis=1)
         self.total_base_loss = tf.reduce_mean(self.base_loss)
+
+        self.base_fed_emb_loss = tf.reduce_sum(
+            tf.square(masked_base_fed_emb_output - masked_base_target), axis=1)
+        self.total_base_fed_emb_loss = tf.reduce_mean(self.base_fed_emb_loss)
 
         self.meta_t_loss = tf.reduce_sum(
             tf.square(self.meta_t_output - processed_class), axis=1)
@@ -417,7 +429,7 @@ class meta_model(object):
         self.refresh_meta_dataset_cache()
 
 
-    def encode_game(task):
+    def encode_game(self, task):
         """Takes a task dict, returns vector appropriate for input to graph."""
         vec = np.zeros(11)
         game_type = t["game"],
@@ -441,7 +453,7 @@ class meta_model(object):
         return vec
 
 
-    def encode_hand(hand):
+    def encode_hand(self, hand):
         """Takes a hand tuple, returns vector appropriate for input to graph"""
         vec = np.zeros(12)
         def _card_to_vec(c):
@@ -452,6 +464,16 @@ class meta_model(object):
         vec[:6] = _card_to_vec[hand[0]]
         vec[6:] = _card_to_vec[hand[1]]
         return vec
+
+
+    def decode_hands(self, encoded_hands):
+        hands = []
+        def _card_from_vec(v):
+            return (np.argmax(v[:4]), np.argmax(v[4:]))
+        for enc_hand in encoded_hands:
+            hand = (_card_from_vec(env_hand[:6]), _card_from_vec(env_hand[6:]))
+            hands.append(hand)
+        return hands
 
 
     def encode_outcomes(self, actions, rewards):
@@ -475,10 +497,10 @@ class meta_model(object):
             self.base_outcome_ph: outcome_buffer
         }
         act_probs = self.sess.run(self.base_output_softmax,
-                                  feed_dict=feed_dict)[0]
+                                  feed_dict=feed_dict)
         actions = [np.random.choice(
             range(3), p=act_probs[i, :]) for i in range(len(act_probs))]
-        return action
+        return actions
         
 
     def play_games(self, num_turns=1, include_new=False, epsilon=epsilon)
@@ -494,14 +516,18 @@ class meta_model(object):
             buff = self.memory_buffers[t]
             encoded_games = np.tile(encoded_game, [num_turns, 1])
             encoded_hands = np.zeros([num_turns, 12])
+            hands = []
             for turn in range(num_turns):
                 hand = game.deal()
+                hands.append(hand)
                 encoded_hands[turn, :] = self.encode_hand(hand)
             acts = self.play_hands(encoded_hands, encoded_games, buff,
                                    epsilon=epsilon) 
             bets = [self.bets[a] for a in acts] 
-            rs = [game.play(hand, self.bets[a]) for a in acts]
-            encoded_outcome = self.encode_outcomes(acts, rs)
+            rs = [game.play(h, self.bets[a]) for h, a in zip(hands, acts)]
+            encoded_outcomes = self.encode_outcomes(acts, rs)
+            encoded_hands = np.concatenate([encoded_hands, encoded_games], axis=-1)
+            encoded_outcomes = np.concatenate([encoded_outcomes, encoded_games], axis=-1)
             buff.insert(encoded_hands, encoded_outcomes)
 
 
@@ -526,7 +552,7 @@ class meta_model(object):
         input_buff, output_buff, _ = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
-            self.base_input_ph: input_buffer, :],
+            self.base_input_ph: input_buffer,
             self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
             self.base_outcome_ph: output_buffer,
             self.base_target_ph: targets,
@@ -536,18 +562,55 @@ class meta_model(object):
         self.sess.run(self.base_train, feed_dict=feed_dict)
 
 
-    def base_loss_eval_step(self, memory_buffer):
+    def reward_eval_helper(self, act_probs, encoded_hands=None, hands=None):
+        if encoded_hands is not None:
+            hands = self.decode_hands(encoded_hands)
+        actions = [np.random.choice(
+            range(3), p=act_probs[i, :]) for i in range(len(act_probs))]
+        bets = [self.bets[a] for a in acts] 
+        rs = [game.play(hand, self.bets[a]) for a in acts]
+        return np.mean(rs)
+
+
+    def base_eval(self, memory_buffer, return_rewards=True):
         input_buff, output_buff, _ = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
-            self.base_input_ph: input_buffer, :],
+            self.base_input_ph: input_buffer,
             self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
             self.base_outcome_ph: output_buffer,
             self.base_target_ph: targets,
-            self.base_target_mask_ph: target_mask,
+            self.base_target_mask_ph: target_mask
         }
-        loss = self.sess.run(self.base_total_loss, feed_dict=feed_dict)
-        return loss
+        fetches = [self.base_total_loss]
+        if return_rewards:
+            fetches.append(self.base_output_softmax)
+        res = self.sess.run(fetches, feed_dict=feed_dict)
+        if return_rewards:
+            res = res[0], self.reward_eval_helper(res[1], input_buff[:, :12])
+        return res 
+
+
+    def base_embedding_eval(self, embedding, memory_buffer, return_rewards=True):
+        input_buff, output_buff, _ = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.base_feed_embedding_ph: embedding,
+            self.base_input_ph: input_buffer,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask
+        }
+        fetches = [self.base_total_fed_emb_loss]
+        if return_rewards:
+            fetches.append(self.base_output_fed_emb_softmax)
+        res = self.sess.run(fetches, feed_dict=feed_dict)
+        if return_rewards:
+            avg_reward = self.reward_eval_helper(act_probs, input_buff[:, :12])
+        return loss, avg_reward 
+
+
+    def meta_loss_eval():
+        
 
 
 ???    def dataset_eval(self, dataset, zeros=False, base_input=True, base_output=True):
