@@ -552,9 +552,9 @@ class meta_model(object):
         input_buff, output_buff, _ = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
-            self.base_input_ph: input_buffer,
+            self.base_input_ph: input_buff,
             self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
-            self.base_outcome_ph: output_buffer,
+            self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
             self.base_target_mask_ph: target_mask,
             self.lr_ph = lr
@@ -576,9 +576,9 @@ class meta_model(object):
         input_buff, output_buff, _ = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
-            self.base_input_ph: input_buffer,
+            self.base_input_ph: input_buff,
             self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
-            self.base_outcome_ph: output_buffer,
+            self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
             self.base_target_mask_ph: target_mask
         }
@@ -608,86 +608,67 @@ class meta_model(object):
             avg_reward = self.reward_eval_helper(act_probs, input_buff[:, :12])
         return loss, avg_reward 
 
+    
+    def get_base_embedding(self, memory_buffer):
+        input_buff, output_buff, _ = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.base_feed_embedding_ph: embedding,
+            self.base_input_ph: input_buff,
+            self.guess_input_mask_ph: np.ones([self.memory_buffer_size]),
+            self.base_outcome_ph: output_buff
+        }
+        res = self.sess.run(self.guess_base_function_emb, feed_dict=feed_dict)
 
-    def meta_loss_eval():
+
+    def get_meta_dataset(self, meta_task, include_new=False):
+        """override_m2l is used to allow meta mapped class. even if not trained on it"""
+        x_data = []
+        y_data = []
+        if include_new:
+            this_base_tasks = self.meta_pairings_full[meta_task]["base"]
+            this_meta_tasks = self.meta_pairings_full[meta_task]["meta"]
+        else:
+            this_base_tasks = self.meta_pairings_base[meta_task]["base"]
+            this_meta_tasks = self.meta_pairings_base[meta_task]["meta"]
+        for (task, other) in this_base_tasks:
+            task_buffer = self.memory_buffers[task]
+            x_data.append(self.get_task_embedding(task_buffer)[0, :])
+            if other in [0, 1]:  # for classification meta tasks
+                y_data.append(other)
+            else:
+                other_buffer = self.memory_buffers[other]
+                y_data.append(self.get_task_embedding(other_buffer)[0, :])
+        return {"x": np.array(x_data), "y": np.array(y_data)}
+
+
+    def refresh_meta_dataset_cache(self, include_new=False):
+        meta_tasks = self.all_base_meta_tasks 
+        if include_new:
+            meta_tasks += self.new_meta_tasks 
+
+        for t in meta_tasks:
+            self.meta_dataset_cache[t] = self.get_meta_dataset(t, include_new)
+
+
+    def meta_loss_eval(self, meta_dataset):
+        feed_dict = {
+            self.meta_input_ph: meta_dataset["x"] 
+            self.guess_input_mask_ph: np.ones([len(meta_dataset["x"])])
+        }
+        y_data = meta_dataset["y"]
+        if len(y_data.shape) == 1:
+            feed_dict[self.meta_class_ph] = y_data 
+            fetch = self.meta_t_loss
+        else:
+            feed_dict[self.meta_target_ph] = y_data 
+            fetch = self.meta_m_loss
+
+        return self.sess.run(fetch, feed_dict=feed_dict)
+        
         
 
 
-???    def dataset_eval(self, dataset, zeros=False, base_input=True, base_output=True):
-???        this_feed_dict = {
-???            self.base_input_ph: dataset["x"] if base_input else self.dummy_base_input,
-???            self.guess_input_mask_ph: np.zeros(len(dataset["x"]), dtype=np.bool) if zeros else np.ones(len(dataset["x"]), dtype=np.bool),
-???            self.is_base_input: base_input,
-???            self.is_base_output: base_output,
-???            self.base_target_ph: dataset["y"] if base_output else self.dummy_base_output,
-???            self.meta_input_ph: self.dummy_meta_input if base_input else dataset["x"],
-???            self.meta_target_ph: self.dummy_meta_output if base_output else dataset["y"]
-???        }
-???        fetch  = self.total_base_hard_loss if base_output and base_hard_eval else self.total_loss 
-???        loss = self.sess.run(fetch, feed_dict=this_feed_dict)
-???        return loss
-???
-???
-???    def dataset_embedding_eval(self, dataset, embedding, zeros=False, base_input=True, base_output=True, meta_binary=False):
-???        this_feed_dict = {
-???            self.embedding_is_fed: True,
-???            self.feed_embedding_ph: np.zeros_like(embedding) if zeros else embedding,
-???            self.base_input_ph: dataset["x"] if base_input else self.dummy_base_input,
-???            self.guess_input_mask_ph: np.zeros(len(dataset["x"]), dtype=np.bool) if zeros else np.ones(len(dataset["x"]), dtype=np.bool),
-???            self.is_base_input: base_input,
-???            self.is_base_output: base_output,
-???            self.base_target_ph: dataset["y"] if base_output or meta_binary else self.dummy_base_output,
-???            self.meta_input_ph: self.dummy_meta_input if base_input else dataset["x"],
-???            self.meta_target_ph: self.dummy_meta_output if base_output or meta_binary else dataset["y"]
-???        }
-???        fetch  = self.total_base_hard_loss if base_output and base_hard_eval else self.total_loss 
-???        loss = self.sess.run(fetch, feed_dict=this_feed_dict)
-???        return loss
-???
-???
-???    def dataset_train_step(self, dataset, lr, base_input=True, base_output=True, meta_binary=False):
-???        guess_mask = self._guess_mask(len(dataset["x"]))
-???        this_feed_dict = {
-???            self.lr_ph: lr,
-???            self.base_input_ph: dataset["x"] if base_input else self.dummy_base_input,
-???            self.guess_input_mask_ph: guess_mask, 
-???            self.is_base_input: base_input,
-???            self.is_base_output: base_output,
-???            self.base_target_ph: dataset["y"] if base_output or meta_binary else self.dummy_base_output,
-???            self.meta_input_ph: self.dummy_meta_input if base_input else dataset["x"],
-???            self.meta_target_ph: self.dummy_meta_output if base_output or meta_binary else dataset["y"]
-???        }
-???        loss = self.sess.run(self.base_full_train, feed_dict=this_feed_dict)
-???        return loss
-???        
-???
-???    def get_meta_dataset(self, meta_task, include_new=False, override_m2l=False):
-???        """override_m2l is used to allow meta mapped class. even if not trained on it"""
-???        x_data = []
-???        y_data = []
-???        if include_new:
-???            this_base_tasks = self.meta_pairings_full[meta_task]["base"]
-???            this_meta_tasks = self.meta_pairings_full[meta_task]["meta"]
-???        else:
-???            this_base_tasks = self.meta_pairings_base[meta_task]["base"]
-???            this_meta_tasks = self.meta_pairings_base[meta_task]["meta"]
-???        for (task, other) in this_base_tasks:
-???            task_dataset = self.base_datasets[task] if task in self.base_tasks else self.new_datasets[task]
-???            x_data.append(self.get_task_embedding(task_dataset)[0, :])
-???            if other in [0, 1]:  # for classification meta tasks
-???                y_data.append(other)
-???            else:
-???                other_dataset = self.base_datasets[other] if other in self.base_tasks else self.new_datasets[other]
-???                y_data.append(self.get_task_embedding(other_dataset)[0, :])
-???        if self.meta_two_level or override_m2l:
-???            for (task, other) in this_meta_tasks:
-???                embedding = self.get_task_embedding(self.meta_dataset_cache[task], 
-???                                                    base_input=False)[0, :]
-???                other_embedding = self.get_task_embedding(self.meta_dataset_cache[other], 
-???                                                          base_input=False)[0, :]
-???                x_data.append(embedding)
-???                y_data.append(other_embedding)
-???        return {"x": np.array(x_data), "y": np.array(y_data)}
 ???
 ???
 ???    def meta_true_eval(self):
