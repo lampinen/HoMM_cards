@@ -666,71 +666,84 @@ class meta_model(object):
 
         return self.sess.run(fetch, feed_dict=feed_dict)
         
-        
+
+    def run_meta_loss_eval(self, include_new=False):
+        meta_tasks = self.all_base_meta_tasks 
+        if include_new:
+            meta_tasks += self.new_meta_tasks 
+
+        names = []
+        losses = []
+        for t in meta_tasks:
+            meta_dataset = self.meta_dataset_cache[t]
+            loss = self.meta_loss_eval(meta_dataset)
+            names.append(t)
+            losses.append(loss)
+
+        return losses, names
+
+    
+    def get_meta_outputs(self, meta_dataset, new_dataset=None):
+        """Get new dataset mapped according to meta_dataset, or just outputs
+        for original dataset if new_dataset is None"""
+        meta_class = len(meta_dataset["y"].shape) == 1
+
+        if new_dataset is not None:
+            this_x = np.concatenate([meta_dataset["x"], new_dataset["x"]], axis=0)
+            if meta_class:
+                this_y = np.concatenate([meta_dataset["y"], np.zeros([len(new_dataset["x"])])], axis=0)
+            else:
+                this_y = np.concatenate([meta_dataset["y"], np.zeros_like(new_dataset["x"])], axis=0)
+            this_mask = np.zeros(len(this_x), dtype=np.bool)
+            this_mask[:len(meta_dataset["x"])] = True # use only these to guess
+        else:
+            this_x = meta_dataset["x"]
+            this_y = meta_dataset["y"]
+            this_mask = np.ones(len(this_x), dtype=np.bool)
+
+        feed_dict = {
+            self.meta_input_ph: this_x 
+            self.guess_input_mask_ph: this_y 
+        }
+        if meta_class:
+            feed_dict[self.meta_class_ph] = this_y 
+            this_fetch = self.meta_t_output 
+        else:
+            feed_dict[self.meta_target_ph] = this_y
+            this_fetch = self.meta_m_output 
+
+        res = self.sess.run(this_fetch)
+        return res[len(meta_dataset["x"]):, :]
 
 
-???
-???
-???    def meta_true_eval(self):
-???        """Evaluates true meta loss, i.e. the accuracy of the model produced
-???           by the embedding output by the meta task"""
-???        losses = []
-???        names = []
-???        for meta_task in self.base_meta_mappings:
-???            meta_dataset = self.get_meta_dataset(meta_task)
-???            for task, other in self.meta_pairings_full[meta_task]["base"]:
-???                if task in self.base_tasks:
-???                    task_dataset = self.base_datasets[task]
-???                else: 
-???                    task_dataset = self.new_datasets[task]
-???
-???                task_embedding = self.get_task_embedding(task_dataset)
-???
-???                if other in self.base_tasks:
-???                    dataset = self.base_datasets[other]
-???                else:
-???                    dataset = self.new_datasets[other]
-???
-???                mapped_embedding = self.get_outputs(meta_dataset,
-???                                                    {"x": task_embedding},
-???                                                    base_input=False,
-???                                                    base_output=False)
-???
-???                names.append(meta_task + ":" + task + "->" + other)
-???                losses.append(self.dataset_embedding_eval(dataset, mapped_embedding))
-???
-???        return losses, names
-???
-???
-???    def meta_mapped_classification_true_eval(self):
-???        """Evaluates true meta loss of classification embeddings output 
-???           by the embedding output by the meta mapping tasks"""
-???        losses = []
-???        names = []
-???        for meta_task in self.base_meta_mappings:
-???            meta_dataset = self.get_meta_dataset(meta_task, include_new=True,
-???                                                 override_m2l=True)
-???            for task, other in self.meta_pairings_full[meta_task]["meta"]:
-???                task_dataset = self.get_meta_dataset(task, include_new=True)
-???
-???                task_embedding = self.get_task_embedding(task_dataset,
-???                                                         base_input=False)
-???
-???                dataset = self.get_meta_dataset(other, include_new=True)
-???
-???                mapped_embedding = self.get_outputs(meta_dataset,
-???                                                    {"x": task_embedding},
-???                                                    base_input=False,
-???                                                    base_output=False)
-???
-???                names.append(meta_task + ":" + task + "->" + other)
-???                losses.append(
-???                    self.dataset_embedding_eval(dataset, mapped_embedding,
-???                                                base_input=False))
-???
-???        return losses, names
-???
-???
+    def meta_true_eval(self, include_new=False):
+        """Evaluates true meta loss, i.e. the accuracy of the model produced
+           by the embedding output by the meta task"""
+        meta_tasks = self.all_base_meta_tasks 
+        meta_pairings = self.meta_pairings_base
+        if include_new:
+            meta_tasks += self.new_meta_tasks 
+            meta_pairings = self.meta_pairings_full
+
+        names = []
+        losses = []
+        for t in meta_tasks:
+            meta_dataset = self.meta_dataset_cache[t]
+            for task, other in meta_pairings[meta_task]["base"]:
+                task_buffer = self.memory_buffers[task]
+                task_embedding = self.get_base_embedding(task_buffer)
+
+                other_buffer = self.memory_buffers[other]
+
+                mapped_embedding = self.get_meta_outputs(
+                    meta_dataset, {"x": task_embedding})
+
+                names.append(meta_task + ":" + task + "->" + other)
+                _, this_rewards = self.base_embedding_eval(mapped_embedding, other_buffer)
+                rewards.append(this_rewards)
+
+        return rewards, names
+
 ???    def base_eval(self):
 ???        """Evaluates loss on the base tasks."""
 ???        losses = np.zeros([len(self.base_tasks) + len(self.all_base_meta_tasks)])
