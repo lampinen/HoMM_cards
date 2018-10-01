@@ -744,6 +744,23 @@ class meta_model(object):
 
         return rewards, names
 
+
+    def meta_train_step(self, meta_dataset):
+        feed_dict = {
+            self.meta_input_ph: meta_dataset["x"] 
+            self.guess_input_mask_ph: np.ones([len(meta_dataset["x"])])
+        }
+        y_data = meta_dataset["y"]
+        if len(y_data.shape) == 1:
+            feed_dict[self.meta_class_ph] = y_data 
+            op = self.meta_t_train
+        else:
+            feed_dict[self.meta_target_ph] = y_data 
+            op = self.meta_m_train
+
+        self.sess.run(op, feed_dict=feed_dict)
+
+
 ???    def base_eval(self):
 ???        """Evaluates loss on the base tasks."""
 ???        losses = np.zeros([len(self.base_tasks) + len(self.all_base_meta_tasks)])
