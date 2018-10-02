@@ -47,8 +47,8 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 10, # how many epochs between updates to buffers
 
-    "max_base_epochs": 4000 ,
-    "max_new_epochs": 200,
+    "max_base_epochs": 1 ,
+    "max_new_epochs": 1,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
 
@@ -980,7 +980,7 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
     model.save_embeddings(filename=filename_prefix + "_guess_embeddings.csv",
                           include_new=True)
 
-    for meta_task in base_meta_mappings:
+    for meta_task in config["base_meta_mappings"]:
         model.save_embeddings(filename=filename_prefix + "_" + meta_task + "_guess_embeddings.csv",
                               meta_task=meta_task,
                               include_new=True)
@@ -991,7 +991,7 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
 
     model.save_embeddings(filename=filename_prefix + "_final_embeddings.csv",
                           include_new=True)
-    for meta_task in base_meta_mappings:
+    for meta_task in config["base_meta_mappings"]:
         model.save_embeddings(filename=filename_prefix + "_" + meta_task + "_final_embeddings.csv",
                               meta_task=meta_task,
                               include_new=True)
