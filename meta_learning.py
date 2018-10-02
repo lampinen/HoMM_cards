@@ -33,7 +33,7 @@ config = {
 
     "epsilon": 0.1,
     "init_learning_rate": 1e-4,
-    "init_meta_learning_rate": 2e-4,
+    "init_meta_learning_rate": 1e-4,
 
     "new_init_learning_rate": 1e-6,
     "new_init_meta_learning_rate": 1e-6,
@@ -570,10 +570,8 @@ class meta_model(object):
     def _outcomes_to_targets(self, encoded_outcomes):
         num = len(encoded_outcomes)
         targets = np.zeros([num, 3]) 
-        mask = np.zeros_like(targets, dtype=np.bool) 
-        inds = encoded_outcomes[:, :3].astype(np.bool)
-        targets[inds] = encoded_outcomes[:, -1]
-        mask[inds] = 1. 
+        mask = encoded_outcomes[:, :3].astype(np.bool)
+        targets[mask] = encoded_outcomes[:, 3]
         return targets, mask
 
 
