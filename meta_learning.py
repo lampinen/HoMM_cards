@@ -31,15 +31,15 @@ config = {
     "num_hidden": 64,
     "num_hidden_hyper": 64,
 
-    "epsilon": 0.1,
+    "epsilon": 0.5,
     "init_learning_rate": 1e-4,
     "init_meta_learning_rate": 1e-4,
 
     "new_init_learning_rate": 1e-6,
     "new_init_meta_learning_rate": 1e-6,
 
-    "lr_decay": 0.85,
-    "meta_lr_decay": 0.85,
+    "lr_decay": 0.9,
+    "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
     "min_learning_rate": 1e-6,
@@ -47,8 +47,8 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 10, # how many epochs between updates to buffers
 
-    "max_base_epochs": 1 ,
-    "max_new_epochs": 1,
+    "max_base_epochs": 10000 ,
+    "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
 
