@@ -874,6 +874,8 @@ class meta_model(object):
             save_every = config["save_every"]
             early_stopping_thresh = config["early_stopping_thresh"]
             lr_decays_every = config["lr_decays_every"]
+            lr_decay = config["lr_decay"]
+            meta_lr_decay = config["meta_lr_decay"]
             min_learning_rate = config["min_learning_rate"]
             for epoch in range(config["max_base_epochs"]):
                 if epoch % config["refresh_mem_buffs_every"] == 0:
