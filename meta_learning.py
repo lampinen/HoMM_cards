@@ -453,6 +453,7 @@ class meta_model(object):
         self.play_games(num_turns=config["memory_buffer_size"],
                         include_new=True,
                         epsilon=1)
+
         self.refresh_meta_dataset_cache()
 
 
@@ -487,6 +488,7 @@ class meta_model(object):
             vec = np.zeros(6)
             vec[c[0]] = 1.
             vec[c[1] + 4] = 1.
+            return vec
 
         vec[:6] = _card_to_vec(hand[0])
         vec[6:] = _card_to_vec(hand[1])
