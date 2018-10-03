@@ -29,7 +29,7 @@ config = {
     "num_outcome": (3 + 1) + (5 + 2 + 2 + 2), # 3 possible bets (actions) + reward
                                            # + 5 games + 3 binary options
     "num_hidden": 64,
-    "num_hidden_hyper": 64,
+    "num_hidden_hyper": 256,
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
@@ -42,22 +42,22 @@ config = {
     "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
-    "min_learning_rate": 1e-6,
+    "min_learning_rate": 1e-7,
 
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 10, # how many epochs between updates to buffers
 
-    "max_base_epochs": 10000 ,
+    "max_base_epochs": 20000 ,
     "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
 
     "output_dir": "results/",
-    "save_every": 10, 
+    "save_every": 20, 
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
-    "early_stopping_thresh": 0.005,
+    "early_stopping_thresh": 0.05,
     "new_tasks": [{"game": "straight_flush", "losers": True,
                   "black_valuable": True, "suits_rule": False}], # will be removed
                                                                      # from base tasks
