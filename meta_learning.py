@@ -5,6 +5,7 @@ from __future__ import division
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+import os
 from copy import deepcopy
 
 from simple_card_games import card_game
@@ -47,13 +48,14 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 10, # how many epochs between updates to buffers
 
-    "max_base_epochs": 20000 ,
+    "max_base_epochs": 20000,
     "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
 
     "output_dir": "results/",
     "save_every": 20, 
+    "eval_all_hands": True, # whether to save guess probss on each hand & each game
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
@@ -514,7 +516,8 @@ class meta_model(object):
         return mat
 
 
-    def play_hands(self, encoded_hands, encoded_games, memory_buffer, epsilon=0.):
+    def play_hands(self, encoded_hands, encoded_games, memory_buffer,
+                   epsilon=0., return_probs=False):
         """Plays the provided hand conditioned on the game and memory buffer,
         with epsilon-greedy exploration."""
         if epsilon == 1.: # makes it easier to fill buffers before play begins
@@ -527,8 +530,18 @@ class meta_model(object):
         }
         act_probs = self.sess.run(self.base_output_softmax,
                                   feed_dict=feed_dict)
-        actions = [np.random.choice(
-            range(3), p=act_probs[i, :]) for i in range(len(act_probs))]
+        
+        if return_probs: # return raw probs, e.g. for debugging
+            return act_probs
+
+        def _action_from_probs(probs, epsilon):
+            if np.random.rand() > epsilon:
+                return np.random.choice(range(3))
+            else:
+                return np.random.choice(range(3), p=probs)
+
+        actions = [_action_from_probs(
+            act_probs[i, :], epsilon) for i in range(len(act_probs))]
         return actions
         
 
@@ -959,6 +972,34 @@ class meta_model(object):
 
             for i in range(num_hidden_hyper):
                 fout.write(("%i, " %i) + (format_string % tuple(task_embeddings[:, i])))
+
+
+    def eval_all_games_all_hands(self, directory, include_new=False):
+        """Saves the probabilities for all games and all hands"""
+        if include_new:
+            this_tasks = self.all_base_tasks
+        else: 
+            this_tasks = self.base_tasks
+        for t in this_tasks:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            t_str = _stringify_game(t)
+            with open(directory + t_str + "_actions.csv", "w") as fout:
+                fout.write("hand, prob_0, prob_1, prob_2\n")
+                game = self.games[t_str]
+                encoded_game = self.encode_game(t)
+                buff = self.memory_buffers[t_str]
+                num_hands = len(game.hands)
+                encoded_games = np.tile(encoded_game, [num_hands, 1])
+                encoded_hands = np.zeros([num_hands, 12])
+                for turn, hand in enumerate(game.hands):
+                    encoded_hands[turn, :] = self.encode_hand(hand)
+                act_probs = self.play_hands(encoded_hands, encoded_games, buff,
+                                            epsilon=0., return_probs=True) 
+                for turn, hand in enumerate(game.hands):
+                    fout.write(
+                        '"' + hand.__repr__() + '", %f, %f, %f\n' % tuple(act_probs[turn, :]))
+
                 
 
 ## running stuff
@@ -979,6 +1020,9 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
                        include_new=False)
     model.save_embeddings(filename=filename_prefix + "_guess_embeddings.csv",
                           include_new=True)
+    if config["eval_all_hands"]:
+        model.eval_all_games_all_hands(directory=config["output_dir"] + "/guess_hand_actions/run%i/" % run_i,
+                                       include_new=True)
 
     for meta_task in config["base_meta_mappings"]:
         model.save_embeddings(filename=filename_prefix + "_" + meta_task + "_guess_embeddings.csv",
