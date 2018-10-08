@@ -15,8 +15,8 @@ pi = np.pi
 ### Parameters #################################################
 config = {
     "run_offset": 0,
-    "num_runs": 10,
-    "game_types": ["high_card", "match", "pairs_and_high", "straight_flush", "sum_under"],
+    "num_runs": 3,
+    "game_types": ["high_card","straight_flush"],#,  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
     "suits_rule": [True, False],
     "losers": [True, False],
@@ -29,18 +29,18 @@ config = {
     "num_output": 3, # bet 0, bet 1, bet 2 
     "num_outcome": (3 + 1) + (5 + 2 + 2 + 2), # 3 possible bets (actions) + reward
                                            # + 5 games + 3 binary options
-    "num_hidden": 64,
-    "num_hidden_hyper": 256,
+    "num_hidden": 32,
+    "num_hidden_hyper": 128,
 
     "epsilon": 0.5,
-    "init_learning_rate": 1e-4,
-    "init_meta_learning_rate": 1e-4,
+    "init_learning_rate": 2e-4,
+    "init_meta_learning_rate": 2e-4,
 
     "new_init_learning_rate": 1e-6,
     "new_init_meta_learning_rate": 1e-6,
 
-    "lr_decay": 0.9,
-    "meta_lr_decay": 0.9,
+    "lr_decay": 0.85,
+    "meta_lr_decay": 0.85,
 
     "lr_decays_every": 100,
     "min_learning_rate": 1e-7,
@@ -48,12 +48,12 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 10, # how many epochs between updates to buffers
 
-    "max_base_epochs": 20000,
+    "max_base_epochs": 100000,
     "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
 
-    "output_dir": "results/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128_f32_smalltest/",
     "save_every": 20, 
     "eval_all_hands": True, # whether to save guess probss on each hand & each game
 
