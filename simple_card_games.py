@@ -121,7 +121,18 @@ class card_game(object):
             return bet 
         else:
             return -bet
-            
+
+
+    def compute_expected_return(self, max_bet=2.):
+        r = 0.
+        for hand in self.hands:
+            wp = self.hand_to_win_prob[hand]
+            if wp > 0.5:
+                r += wp*max_bet - (1-wp)*max_bet
+
+        r /= len(self.hands)
+        return r
+
         
 ### simple tests
 if __name__ == "__main__":
@@ -136,6 +147,7 @@ if __name__ == "__main__":
         this_game = card_game(game_type=g)
         print(this_game.hands)
         print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+        print(this_game.compute_expected_return())
         
     print("testing methods")
     this_game = card_game(game_type="high_card")
@@ -148,21 +160,26 @@ if __name__ == "__main__":
     print("testing suits_rule")
     this_game = card_game(game_type="high_card", suits_rule=True)
     print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+    print(this_game.compute_expected_return())
 
     print("testing losers")
     this_game = card_game(game_type="high_card", losers=True)
     print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+    print(this_game.compute_expected_return())
 
     print("testing black_valuable=False")
     this_game = card_game(game_type="high_card", black_valuable=False)
     print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+    print(this_game.compute_expected_return())
 
     print("all 3")
     this_game = card_game(game_type="high_card", black_valuable=False,
                           suits_rule=True, losers=True)
     print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+    print(this_game.compute_expected_return())
 
     print("all 3 on sum under")
     this_game = card_game(game_type="sum_under", black_valuable=False,
                           suits_rule=True, losers=True)
     print(sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]))
+    print(this_game.compute_expected_return())
