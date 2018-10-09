@@ -48,7 +48,7 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 1000, # how many epochs between updates to buffers
 
-    "max_base_epochs": 100000,
+    "max_base_epochs": 20000,
     "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
@@ -57,7 +57,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "results/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128_f32/",
     "save_every": 20, 
     "eval_all_hands": True, # whether to save guess probss on each hand & each game
 
@@ -454,7 +454,7 @@ class meta_model(object):
         self.total_meta_m_loss = tf.reduce_mean(self.meta_m_loss)
 
 
-        optimizer = tf.train.AdamOptimizer(self.lr_ph)
+        optimizer = tf.train.RMSPropOptimizer(self.lr_ph)
 
         self.base_train = optimizer.minimize(self.total_base_loss)
         self.meta_t_train = optimizer.minimize(self.total_meta_t_loss)
@@ -918,7 +918,6 @@ class meta_model(object):
                 for task_i in order:
                     task = tasks[task_i]
                     if task in meta_names:
-                        continue
                         dataset = self.meta_dataset_cache[task]
                         self.meta_train_step(dataset, meta_learning_rate)
                     else:
