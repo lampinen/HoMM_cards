@@ -33,8 +33,8 @@ config = {
     "num_hidden_hyper": 128,
 
     "epsilon": 0.5,
-    "init_learning_rate": 2e-4,
-    "init_meta_learning_rate": 2e-4,
+    "init_learning_rate": 5e-4,
+    "init_meta_learning_rate": 5e-4,
 
     "new_init_learning_rate": 1e-6,
     "new_init_meta_learning_rate": 1e-6,
@@ -46,15 +46,18 @@ config = {
     "min_learning_rate": 1e-7,
 
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
-    "refresh_mem_buffs_every": 10, # how many epochs between updates to buffers
+    "refresh_mem_buffs_every": 1000, # how many epochs between updates to buffers
 
     "max_base_epochs": 100000,
     "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
     "softmax_beta": 5, # 1/temperature on action softmax, sharpens if > 1
+    "task_weight_weight_mult": 1., # not a typo, the init range of the final
+                                   # hyper weights that generate the task
+                                   # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128_f32_smalltest/",
+    "output_dir": "results/",
     "save_every": 20, 
     "eval_all_hands": True, # whether to save guess probss on each hand & each game
 
@@ -247,6 +250,7 @@ class meta_model(object):
 
         processed_input = slim.fully_connected(input_processing_2, num_hidden_hyper, 
                                                activation_fn=internal_nonlinearity) 
+        self.processed_input = processed_input
 
         all_target_processor_nontf = random_orthogonal(num_hidden_hyper)[:, :output_size + 1]
         self.target_processor_nontf = all_target_processor_nontf[:, :output_size]
@@ -272,6 +276,7 @@ class meta_model(object):
             return res
 
         processed_outcomes = _outcome_encoder(self.base_outcome_ph, reuse=False)
+        self.processed_outcomes = processed_outcomes
 
         # meta task input
         self.meta_input_ph = tf.placeholder(tf.float32, shape=[None, num_hidden_hyper])
@@ -337,6 +342,11 @@ class meta_model(object):
 #                                          lambda: self.guess_function_embedding)
 
         num_task_hidden_layers = config["num_task_hidden_layers"]
+
+        tw_range = config["task_weight_weight_mult"]/np.sqrt(
+            num_hidden * num_hidden_hyper) # yields a very very roughly O(1) map
+        task_weight_gen_init = tf.random_uniform_initializer(-tw_range,
+                                                             tw_range)
         
         def _hyper_network(function_embedding, reuse=True):
             with tf.variable_scope('hyper', reuse=reuse):
@@ -351,7 +361,8 @@ class meta_model(object):
                 hyper_hidden = slim.fully_connected(hyper_hidden, num_hidden_hyper,
                                                       activation_fn=internal_nonlinearity)
                 task_weights = slim.fully_connected(hyper_hidden, num_hidden*(num_hidden_hyper +(num_task_hidden_layers-1)*num_hidden + num_hidden_hyper),
-                                                    activation_fn=None)
+                                                    activation_fn=None,
+                                                    weights_initializer=task_weight_gen_init)
 
                 task_weights = tf.reshape(task_weights, [-1, num_hidden, (num_hidden_hyper + (num_task_hidden_layers-1)*num_hidden + num_hidden_hyper)]) 
                 task_biases = slim.fully_connected(hyper_hidden, num_task_hidden_layers * num_hidden + num_hidden_hyper,
@@ -443,7 +454,7 @@ class meta_model(object):
         self.total_meta_m_loss = tf.reduce_mean(self.meta_m_loss)
 
 
-        optimizer = tf.train.RMSPropOptimizer(self.lr_ph)
+        optimizer = tf.train.AdamOptimizer(self.lr_ph)
 
         self.base_train = optimizer.minimize(self.total_base_loss)
         self.meta_t_train = optimizer.minimize(self.total_meta_t_loss)
@@ -624,6 +635,8 @@ class meta_model(object):
             self.base_target_ph: targets,
             self.base_target_mask_ph: target_mask
         }
+#        print(self.sess.run([self.base_task_params, self.base_output], feed_dict=feed_dict))
+#        exit()
         fetches = [self.total_base_loss]
         if return_rewards:
             fetches.append(self.base_output_softmax)
@@ -905,6 +918,7 @@ class meta_model(object):
                 for task_i in order:
                     task = tasks[task_i]
                     if task in meta_names:
+                        continue
                         dataset = self.meta_dataset_cache[task]
                         self.meta_train_step(dataset, meta_learning_rate)
                     else:
