@@ -861,6 +861,7 @@ class meta_model(object):
                 include_new=include_new)
 
             fout.write("epoch, " + ", ".join(base_names + meta_names) + "\n")
+            fout_reward.write("epoch, " + ", ".join(base_names) + "\n")
             fout_meta.write("epoch, " + ", ".join(meta_true_names) + "\n")
 
             loss_format = ", ".join(["%f" for _ in base_names + meta_names]) + "\n"
