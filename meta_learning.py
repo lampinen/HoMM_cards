@@ -16,7 +16,7 @@ pi = np.pi
 config = {
     "run_offset": 0,
     "num_runs": 3,
-    "game_types": ["high_card","straight_flush"],#,  "match", "pairs_and_high", "sum_under"],
+    "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
     "suits_rule": [True, False],
     "losers": [True, False],
@@ -52,6 +52,7 @@ config = {
     "max_new_epochs": 500,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
+    "softmax_beta": 5, # 1/temperature on action softmax, sharpens if > 1
 
     "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128_f32_smalltest/",
     "save_every": 20, 
@@ -399,13 +400,14 @@ class meta_model(object):
         self.base_raw_output = _task_network(self.base_task_params,
                                              processed_input)
         self.base_output = _output_mapping(self.base_raw_output)
-        self.base_output_softmax = tf.nn.softmax(self.base_output)
+        self.base_output_softmax = tf.nn.softmax(
+            config["softmax_beta"] * self.base_output)
 
         self.base_raw_output_fed_emb = _task_network(self.fed_emb_task_params,
                                                      processed_input)
         self.base_output_fed_emb = _output_mapping(self.base_raw_output_fed_emb)
         self.base_output_fed_emb_softmax = tf.nn.softmax(
-            self.base_output_fed_emb)
+            config["softmax_beta"] * self.base_output_fed_emb)
 
         self.meta_t_raw_output = _task_network(self.meta_t_task_params,
                                                self.meta_input_ph)
@@ -605,8 +607,8 @@ class meta_model(object):
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
         if encoded_hands is not None:
             hands = self.decode_hands(encoded_hands)
-        actions = [np.random.choice(
-            range(3), p=act_probs[i, :]) for i in range(len(act_probs))]
+        actions = [np.argmax(act_probs[i, :],
+                             axis=-1) for i in range(len(act_probs))]
         bets = [self.bets[a] for a in actions] 
         rs = [game.play(hands[i], self.bets[a]) for i, a in enumerate(actions)]
         return np.mean(rs)
