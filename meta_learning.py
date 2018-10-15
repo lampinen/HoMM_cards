@@ -40,7 +40,7 @@ config = {
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
-    "meta_lr_decay": 0.85,
+    "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
     "min_learning_rate": 1e-7,
@@ -57,7 +57,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_longer/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_more_heldout_smd/",
     "save_every": 20, 
     "eval_all_hands": True, # whether to save guess probs on each hand & each game
 
@@ -65,8 +65,14 @@ config = {
     "meta_batch_size": 768, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
     "new_tasks": [{"game": "straight_flush", "losers": True,
-                  "black_valuable": True, "suits_rule": False}], # will be removed
-                                                                  # from base tasks
+                  "black_valuable": False, "suits_rule": False},
+		  {"game": "straight_flush", "losers": True,
+                  "black_valuable": True, "suits_rule": False},
+		  {"game": "straight_flush", "losers": True,
+                  "black_valuable": False, "suits_rule": True},
+		  {"game": "straight_flush", "losers": True,
+                  "black_valuable": True, "suits_rule": True}], # will be removed
+                                                                # from base tasks
 
     "new_meta_tasks": [],
 
