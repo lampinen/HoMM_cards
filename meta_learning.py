@@ -40,13 +40,13 @@ config = {
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
-    "meta_lr_decay": 0.9,
+    "meta_lr_decay": 0.85,
 
     "lr_decays_every": 100,
     "min_learning_rate": 1e-7,
 
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
-    "refresh_mem_buffs_every": 1000, # how many epochs between updates to buffers
+    "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
     "max_base_epochs": 40000,
     "max_new_epochs": 1000,
