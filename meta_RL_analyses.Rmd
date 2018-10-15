@@ -1,0 +1,34 @@
+---
+title: "Meta RL analyses"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+num_runs = 3
+results_dir = "results/results_smd/"
+```
+
+```{r}
+reward_d = data.frame()
+for (run_i in 0:(num_runs-1)) {
+  filename = sprintf("%srun%i_%s.csv", results_dir, run_i, "new_rewards")
+  if (!file.exists(filename)) {
+    next
+  }
+  this_d = read.csv(filename, header=T) %>%
+    mutate(run = run_i)
+  reward_d = bind_rows(reward_d, this_d)
+}
+
+reward_d = reward_d %>%
+  gather(game_str, reward, starts_with("game")) %>%
+  mutate(game_type = str_extract(game_str, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+         losers = grepl("l_1", game_str),
+         black_valuable = grepl("bv_1", game_str),
+         suits_rule = grepl("sr_1", game_str))
+```
+
