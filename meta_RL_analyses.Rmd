@@ -1,0 +1,60 @@
+---
+title: "Meta RL analyses"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+num_runs = 3
+results_dir = "results/results_smd/"
+
+new_game_strs = c("game_straight_flush_l_1_bv_1_sr_0")
+```
+
+```{r}
+reward_d = data.frame()
+for (run_i in 0:(num_runs-1)) {
+  filename = sprintf("%srun%i_%s.csv", results_dir, run_i, "new_rewards")
+  if (!file.exists(filename)) {
+    next
+  }
+  this_d = read.csv(filename, header=T) %>%
+    mutate(run = run_i)
+  reward_d = bind_rows(reward_d, this_d)
+}
+
+reward_d = reward_d %>%
+  gather(game_str, reward, starts_with("game")) %>%
+  mutate(game_type = str_extract(game_str, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+         losers = grepl("l_1", game_str),
+         black_valuable = grepl("bv_1", game_str),
+         suits_rule = grepl("sr_1", game_str),
+         is_new_game = game_str %in% new_game_strs)
+```
+
+```{r}
+avg_reward_d = reward_d %>%
+  select(-game_str) %>%
+  filter(epoch == 0) %>%
+  group_by(game_type, is_new_game) %>%
+  summarize(avg_reward = mean(reward), sd_reward=sd(reward),
+            se_reward = sd_reward/sqrt(n()), 
+            ci_lo = avg_reward - 1.96*se_reward, 
+            ci_hi = avg_reward + 1.96*se_reward)
+```
+
+```{r}
+theme_set(theme_bw() + 
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()))
+```
+
+```{r}
+ggplot(avg_reward_d, aes(x=game_type, fill=is_new_game, y=avg_reward)) +
+  geom_bar(stat="identity", position="dodge") +
+  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
+  scale_fill_brewer(palette="Set2")
+```
+
