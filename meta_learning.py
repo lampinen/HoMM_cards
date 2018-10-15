@@ -15,7 +15,7 @@ pi = np.pi
 ### Parameters #################################################
 config = {
     "run_offset": 0,
-    "num_runs": 3,
+    "num_runs": 10,
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
     "suits_rule": [True, False],
@@ -33,8 +33,8 @@ config = {
     "num_hidden_hyper": 128,
 
     "epsilon": 0.5,
-    "init_learning_rate": 5e-4,
-    "init_meta_learning_rate": 5e-4,
+    "init_learning_rate": 1e-4,
+    "init_meta_learning_rate": 1e-4,
 
     "new_init_learning_rate": 1e-6,
     "new_init_meta_learning_rate": 1e-6,
@@ -48,8 +48,8 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 1000, # how many epochs between updates to buffers
 
-    "max_base_epochs": 20000,
-    "max_new_epochs": 500,
+    "max_base_epochs": 40000,
+    "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
     "softmax_beta": 5, # 1/temperature on action softmax, sharpens if > 1
@@ -57,16 +57,17 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128_f32/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_longer/",
     "save_every": 20, 
-    "eval_all_hands": True, # whether to save guess probss on each hand & each game
+    "eval_all_hands": True, # whether to save guess probs on each hand & each game
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
     "new_tasks": [{"game": "straight_flush", "losers": True,
                   "black_valuable": True, "suits_rule": False}], # will be removed
-                                                                     # from base tasks
+                                                                  # from base tasks
+
     "new_meta_tasks": [],
 
     "internal_nonlinearity": tf.nn.leaky_relu,
@@ -906,7 +907,7 @@ class meta_model(object):
             lr_decay = config["lr_decay"]
             meta_lr_decay = config["meta_lr_decay"]
             min_learning_rate = config["min_learning_rate"]
-            for epoch in range(config["max_base_epochs"]):
+            for epoch in range(num_epochs):
                 if epoch % config["refresh_mem_buffs_every"] == 0:
                     self.play_games(num_turns=config["memory_buffer_size"],
                                     include_new=include_new,
