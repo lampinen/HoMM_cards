@@ -29,6 +29,9 @@ config = {
     "num_output": 3, # bet 0, bet 1, bet 2 
     "num_outcome": (3 + 1) + (5 + 2 + 2 + 2), # 3 possible bets (actions) + reward
                                            # + 5 games + 3 binary options
+    "game_hints_on_examples": False, # if true, provides game labels on input,
+                                     # else replaced with zeros
+
     "num_hidden": 32,
     "num_hidden_hyper": 128,
 
@@ -57,9 +60,9 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_more_heldout_smd/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_no_hints/",
     "save_every": 20, 
-    "eval_all_hands": True, # whether to save guess probs on each hand & each game
+    "eval_all_hands": False, # whether to save guess probs on each hand & each game
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
@@ -180,6 +183,7 @@ class meta_model(object):
         self.num_output = config["num_output"]
         self.num_outcome = config["num_outcome"]
         self.bets = config["bets"]
+        self.game_hints_on_examples = config["game_hints_on_examples"]
 
         base_tasks = config["base_tasks"]
         base_meta_tasks = config["base_meta_tasks"]
@@ -482,6 +486,8 @@ class meta_model(object):
     def encode_game(self, task):
         """Takes a task dict, returns vector appropriate for input to graph."""
         vec = np.zeros(11)
+        if not self.game_hints_on_examples: # no hints for you!
+            return vec
         game_type = t["game"]
         black_valuable = t["black_valuable"]
         suits_rule = t["suits_rule"]
