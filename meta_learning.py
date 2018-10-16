@@ -43,7 +43,7 @@ config = {
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
-    "meta_lr_decay": 0.85,
+    "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
     "min_learning_rate": 1e-7,
