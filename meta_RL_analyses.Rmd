@@ -8,23 +8,38 @@ library(tidyverse)
 ```
 
 ```{r}
-num_runs = 3
-results_dir = "results/results_smd/"
+num_runs = 1
+results_dir = "results/results_no_hints_2/"
 
-new_game_strs = c("game_straight_flush_l_1_bv_1_sr_0")
+new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
+                  "game_straight_flush_l_1_bv_1_sr_0",
+                  "game_straight_flush_l_1_bv_0_sr_1",
+                  "game_straight_flush_l_1_bv_1_sr_1")
 ```
 
+# utils
+
 ```{r}
-reward_d = data.frame()
-for (run_i in 0:(num_runs-1)) {
-  filename = sprintf("%srun%i_%s.csv", results_dir, run_i, "new_rewards")
-  if (!file.exists(filename)) {
-    next
+load_d = function(results_dir, num_runs, file_type) {
+  d = data.frame()
+  for (run_i in 0:(num_runs-1)) {
+    filename = sprintf("%srun%i_%s.csv", results_dir, run_i, file_type)
+    if (!file.exists(filename)) {
+      next
+    }
+    this_d = read.csv(filename, header=T) %>%
+      mutate(run = run_i)
+    d = bind_rows(d, this_d)
   }
-  this_d = read.csv(filename, header=T) %>%
-    mutate(run = run_i)
-  reward_d = bind_rows(reward_d, this_d)
+  return(d)
 }
+```
+
+
+# meta-learning tests
+
+```{r}
+reward_d = load_d(results_dir, num_runs, "new_rewards")
 
 reward_d = reward_d %>%
   gather(game_str, reward, starts_with("game")) %>%
@@ -58,3 +73,30 @@ ggplot(avg_reward_d, aes(x=game_type, fill=is_new_game, y=avg_reward)) +
   scale_fill_brewer(palette="Set2")
 ```
 
+# meta mapping (true) evaluation
+
+```{r}
+meta_d = load_d(results_dir, num_runs, "new_meta_true_losses")
+
+meta_d = meta_d %>%
+  filter(epoch == 0) %>%
+  gather(map_str, reward, -c(run, epoch)) %>%
+  separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
+  mutate(is_new = source %in% new_game_strs | target %in% new_game_strs)
+```
+
+```{r}
+avg_meta_d = meta_d %>%
+  group_by(run, meta_task, is_new) %>%
+  summarize(avg_reward = mean(reward)) %>%
+  group_by(meta_task, is_new) %>%
+  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward)) %>%
+  
+```
+
+```{r}
+ggplot(avg_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
+  geom_bar(stat="identity", position="dodge") +
+# geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
+  scale_fill_brewer(palette="Set2")
+```
