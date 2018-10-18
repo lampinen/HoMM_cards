@@ -47,6 +47,7 @@ config = {
 
     "lr_decays_every": 100,
     "min_learning_rate": 1e-7,
+    "min_meta_learning_rate": 1e-6,
 
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
@@ -60,7 +61,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_no_hints/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
 
@@ -919,7 +920,8 @@ class meta_model(object):
             lr_decay = config["lr_decay"]
             meta_lr_decay = config["meta_lr_decay"]
             min_learning_rate = config["min_learning_rate"]
-            for epoch in range(num_epochs):
+            min_meta_learning_rate = config["min_meta_learning_rate"]
+            for epoch in range(1, num_epochs+1):
                 if epoch % config["refresh_mem_buffs_every"] == 0:
                     self.play_games(num_turns=config["memory_buffer_size"],
                                     include_new=include_new,
@@ -960,7 +962,7 @@ class meta_model(object):
                 if epoch % lr_decays_every == 0 and epoch > 0 and learning_rate > min_learning_rate:
                     learning_rate *= lr_decay
 
-                if epoch % lr_decays_every == 0 and epoch > 0 and meta_learning_rate > min_learning_rate:
+                if epoch % lr_decays_every == 0 and epoch > 0 and meta_learning_rate > min_meta_learning_rate:
                     meta_learning_rate *= meta_lr_decay
 
 
