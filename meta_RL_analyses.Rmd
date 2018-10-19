@@ -9,7 +9,7 @@ library(tidyverse)
 
 ```{r}
 num_runs = 1
-results_dir = "results/results_no_hints_2/"
+results_dir = "results/results_h128/"
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -90,7 +90,7 @@ avg_meta_d = meta_d %>%
   group_by(run, meta_task, is_new) %>%
   summarize(avg_reward = mean(reward)) %>%
   group_by(meta_task, is_new) %>%
-  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward)) %>%
+  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward))
   
 ```
 
