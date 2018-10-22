@@ -8,13 +8,17 @@ library(tidyverse)
 ```
 
 ```{r}
-num_runs = 1
-results_dir = "results/results_h128/"
+num_runs = 5
+results_dir = "results/results_h256/"
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
                   "game_straight_flush_l_1_bv_0_sr_1",
                   "game_straight_flush_l_1_bv_1_sr_1")
+
+meta_mapping_tasks = c("toggle_losers", "toggle_black_valuable", "toggle_suits_rule")
+meta_classification_tasks = c("is_losers", "is_black_valuable", "is_suits_rule",
+                              "is_high_card", "is_match", "is_straight_flush", "is_pairs_and_high", "is_sum_under")
 ```
 
 # utils
@@ -90,13 +94,73 @@ avg_meta_d = meta_d %>%
   group_by(run, meta_task, is_new) %>%
   summarize(avg_reward = mean(reward)) %>%
   group_by(meta_task, is_new) %>%
-  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward))
+  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward),
+            se_reward = sd_avg_reward/sqrt(n()), 
+            ci_lo = avg_avg_reward - 1.96*se_reward, 
+            ci_hi = avg_avg_reward + 1.96*se_reward)
   
 ```
 
 ```{r}
 ggplot(avg_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
   geom_bar(stat="identity", position="dodge") +
-# geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
+  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
   scale_fill_brewer(palette="Set2")
+```
+
+# embeddings
+
+```{r}
+for (emb_type in c("guess", "final")) {
+  emb_d = data.frame()
+  for (run_i in 0:(nruns-1)) {
+    filename = sprintf("%sm2l%s_run%i_%s_embeddings.csv", resulst_dir, run_i, emb_type)
+    if (!file.exists(filename)) {
+      next
+    }
+    this_d = read.csv(filename, header=T)
+    this_d$run = run_i
+    emb_d = bind_rows(emb_d, this_d)
+  }
+  
+  pcs = prcomp(emb_d %>% select(-dimension, -run), center=T, scale=T)
+  pc_d = data.frame(pcs$rotation)
+  pc_d$task = row.names(pc_d)
+  ggplot(pc_d, aes(x=PC1, y=PC2, color=task)) +
+    geom_point() +
+    geom_text(aes(label=task)) +
+    guides(color=F)
+  ggsave(sprintf("plots/PCA_full_%s.png", results_dir, emb_type), width=7, height=7)
+}
+```
+
+```{r}
+emb_type = "guess"
+emb_d = data.frame()
+for (meta_task in c("None", meta_mapping_tasks)) {
+  for (run_i in 0:(num_runs-1)) {
+    if (meta_task == "None") {
+      filename = sprintf("%srun%i_%s_embeddings.csv",results_dir, run_i, emb_type)
+      if (!file.exists(filename)) {
+#          print(paste("Skipping", filename, sep=" "))
+        next 
+      }
+      this_d = read.csv(filename, header=T)
+    } else {
+      filename = sprintf("%srun%i_%s_%s_embeddings.csv", results_dir, run_i, meta_task, emb_type)
+      if (!file.exists(filename)) {
+#          print(paste("Skipping", filename, sep=" "))
+        next 
+      }
+      this_d = read.csv(filename, header=T)
+    }
+    this_d$run = run_i
+    this_d$meta_task = meta_task
+    emb_d = bind_rows(emb_d, this_d)
+  }
+}
+```
+
+```{r}
+
 ```
