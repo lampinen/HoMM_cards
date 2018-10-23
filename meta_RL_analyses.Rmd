@@ -113,8 +113,8 @@ ggplot(avg_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
 ```{r}
 for (emb_type in c("guess", "final")) {
   emb_d = data.frame()
-  for (run_i in 0:(nruns-1)) {
-    filename = sprintf("%sm2l%s_run%i_%s_embeddings.csv", resulst_dir, run_i, emb_type)
+  for (run_i in 0:(num_runs-1)) {
+    filename = sprintf("%srun%i_%s_embeddings.csv", results_dir, run_i, emb_type)
     if (!file.exists(filename)) {
       next
     }
@@ -130,35 +130,35 @@ for (emb_type in c("guess", "final")) {
     geom_point() +
     geom_text(aes(label=task)) +
     guides(color=F)
-  ggsave(sprintf("plots/PCA_full_%s.png", results_dir, emb_type), width=7, height=7)
+  ggsave(sprintf("plots/PCA_full_%s.png", emb_type), width=7, height=7)
 }
 ```
 
 ```{r}
-emb_type = "guess"
-emb_d = data.frame()
-for (meta_task in c("None", meta_mapping_tasks)) {
-  for (run_i in 0:(num_runs-1)) {
-    if (meta_task == "None") {
-      filename = sprintf("%srun%i_%s_embeddings.csv",results_dir, run_i, emb_type)
-      if (!file.exists(filename)) {
-#          print(paste("Skipping", filename, sep=" "))
-        next 
-      }
-      this_d = read.csv(filename, header=T)
-    } else {
-      filename = sprintf("%srun%i_%s_%s_embeddings.csv", results_dir, run_i, meta_task, emb_type)
-      if (!file.exists(filename)) {
-#          print(paste("Skipping", filename, sep=" "))
-        next 
-      }
-      this_d = read.csv(filename, header=T)
-    }
-    this_d$run = run_i
-    this_d$meta_task = meta_task
-    emb_d = bind_rows(emb_d, this_d)
-  }
-}
+# emb_type = "guess"
+# emb_d = data.frame()
+# for (meta_task in c("None", meta_mapping_tasks)) {
+#   for (run_i in 0:(num_runs-1)) {
+#     if (meta_task == "None") {
+#       filename = sprintf("%srun%i_%s_embeddings.csv",results_dir, run_i, emb_type)
+#       if (!file.exists(filename)) {
+# #          print(paste("Skipping", filename, sep=" "))
+#         next 
+#       }
+#       this_d = read.csv(filename, header=T)
+#     } else {
+#       filename = sprintf("%srun%i_%s_%s_embeddings.csv", results_dir, run_i, meta_task, emb_type)
+#       if (!file.exists(filename)) {
+# #          print(paste("Skipping", filename, sep=" "))
+#         next 
+#       }
+#       this_d = read.csv(filename, header=T)
+#     }
+#     this_d$run = run_i
+#     this_d$meta_task = meta_task
+#     emb_d = bind_rows(emb_d, this_d)
+#   }
+# }
 ```
 
 ```{r}
