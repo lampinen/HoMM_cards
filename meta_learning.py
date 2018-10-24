@@ -32,8 +32,8 @@ config = {
     "game_hints_on_examples": False, # if true, provides game labels on input,
                                      # else replaced with zeros
 
-    "num_hidden": 32,
-    "num_hidden_hyper": 128,
+    "num_hidden": 64,
+    "num_hidden_hyper": 256,
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
