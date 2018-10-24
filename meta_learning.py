@@ -56,12 +56,17 @@ config = {
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
+    "train_drop_prob": 0.15, # dropout probability, applied on meta and hyper
+                             # but NOT task or input/output at present. Note
+                             # that because of multiplicative effects and depth
+                             # impact can be dramatic.
+
     "softmax_beta": 5, # 1/temperature on action softmax, sharpens if > 1
     "task_weight_weight_mult": 1., # not a typo, the init range of the final
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h128/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h256_f64_dp15/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
 
@@ -185,6 +190,7 @@ class meta_model(object):
         self.num_outcome = config["num_outcome"]
         self.bets = config["bets"]
         self.game_hints_on_examples = config["game_hints_on_examples"]
+        self.tkp = 1. - config["train_drop_prob"] # drop prob -> keep prob
 
         base_tasks = config["base_tasks"]
         base_meta_tasks = config["base_meta_tasks"]
@@ -249,6 +255,7 @@ class meta_model(object):
             tf.float32, shape=[None, output_size])
 
         self.lr_ph = tf.placeholder(tf.float32)
+        self.keep_prob_ph = tf.placeholder(tf.float32) # dropout keep prob
 
         num_hidden = config["num_hidden"] 
         num_hidden_hyper = config["num_hidden_hyper"] 
@@ -320,17 +327,22 @@ class meta_model(object):
                                          embedded_targets], axis=-1)
                 guess_input = tf.boolean_mask(guess_input,
                                               self.guess_input_mask_ph)
+                guess_input = tf.nn.dropout(guess_input, self.keep_prob_ph)
 
                 gh_1 = slim.fully_connected(guess_input, num_hidden_hyper,
                                             activation_fn=internal_nonlinearity) 
+                gh_1 = tf.nn.dropout(gh_1, self.keep_prob_ph)
                 gh_2 = slim.fully_connected(gh_1, num_hidden_hyper,
                                             activation_fn=internal_nonlinearity) 
+                gh_2 = tf.nn.dropout(gh_2, self.keep_prob_ph)
                 gh_2b = tf.reduce_max(gh_2, axis=0, keep_dims=True)
                 gh_3 = slim.fully_connected(gh_2b, num_hidden_hyper,
                                             activation_fn=internal_nonlinearity) 
+                gh_3 = tf.nn.dropout(gh_3, self.keep_prob_ph)
 
                 guess_embedding = slim.fully_connected(gh_3, num_hidden_hyper,
                                                        activation_fn=None)
+                guess_embedding = tf.nn.dropout(guess_embedding, self.keep_prob_ph)
                 return guess_embedding
 
         self.guess_base_function_emb = _meta_network(processed_input,
@@ -363,18 +375,18 @@ class meta_model(object):
         def _hyper_network(function_embedding, reuse=True):
             with tf.variable_scope('hyper', reuse=reuse):
                 hyper_hidden = function_embedding
-                for _ in range(config["num_hyper_hidden_layers"]-1):
+                for _ in range(config["num_hyper_hidden_layers"]):
                     hyper_hidden = slim.fully_connected(hyper_hidden, num_hidden_hyper,
                                                         activation_fn=internal_nonlinearity)
+                    hyper_hidden = tf.nn.dropout(hyper_hidden, self.keep_prob_ph)
                 
                 hidden_weights = []
                 hidden_biases = []
 
-                hyper_hidden = slim.fully_connected(hyper_hidden, num_hidden_hyper,
-                                                      activation_fn=internal_nonlinearity)
                 task_weights = slim.fully_connected(hyper_hidden, num_hidden*(num_hidden_hyper +(num_task_hidden_layers-1)*num_hidden + num_hidden_hyper),
                                                     activation_fn=None,
                                                     weights_initializer=task_weight_gen_init)
+                task_weights = tf.nn.dropout(task_weights, self.keep_prob_ph)
 
                 task_weights = tf.reshape(task_weights, [-1, num_hidden, (num_hidden_hyper + (num_task_hidden_layers-1)*num_hidden + num_hidden_hyper)]) 
                 task_biases = slim.fully_connected(hyper_hidden, num_task_hidden_layers * num_hidden + num_hidden_hyper,
@@ -553,6 +565,7 @@ class meta_model(object):
         feed_dict = {
             self.base_input_ph: input_buff,
             self.guess_input_mask_ph: np.ones(len(input_buff), dtype=np.bool),
+            self.keep_prob_ph: 1.,
             self.base_outcome_ph: outcome_buff
         }
         act_probs = self.sess.run(self.base_output_softmax,
@@ -624,6 +637,7 @@ class meta_model(object):
             self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
             self.base_target_mask_ph: target_mask,
+            self.keep_prob_ph: self.tkp,
             self.lr_ph: lr
         }
         self.sess.run(self.base_train, feed_dict=feed_dict)
@@ -647,6 +661,7 @@ class meta_model(object):
             self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
             self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
+            self.keep_prob_ph: 1.,
             self.base_target_mask_ph: target_mask
         }
 #        print(self.sess.run([self.base_task_params, self.base_output], feed_dict=feed_dict))
@@ -688,6 +703,7 @@ class meta_model(object):
         input_buff, output_buff = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
+            self.keep_prob_ph: 1.,
             self.feed_embedding_ph: embedding,
             self.base_input_ph: input_buff,
             self.base_target_ph: targets,
@@ -709,6 +725,7 @@ class meta_model(object):
         input_buff, output_buff = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
+            self.keep_prob_ph: 1.,
             self.base_input_ph: input_buff,
             self.guess_input_mask_ph: np.ones([self.memory_buffer_size]),
             self.base_outcome_ph: output_buff
@@ -749,6 +766,7 @@ class meta_model(object):
 
     def meta_loss_eval(self, meta_dataset):
         feed_dict = {
+            self.keep_prob_ph: 1.,
             self.meta_input_ph: meta_dataset["x"], 
             self.guess_input_mask_ph: np.ones([len(meta_dataset["x"])])
         }
@@ -781,6 +799,7 @@ class meta_model(object):
 
     def get_meta_embedding(self, meta_dataset):
         feed_dict = {
+            self.keep_prob_ph: 1.,
             self.meta_input_ph: meta_dataset["x"], 
             self.guess_input_mask_ph: np.ones([len(meta_dataset["x"])])
         }
@@ -814,6 +833,7 @@ class meta_model(object):
             this_mask = np.ones(len(this_x), dtype=np.bool)
 
         feed_dict = {
+            self.keep_prob_ph: 1.,
             self.meta_input_ph: this_x,
             self.guess_input_mask_ph: this_mask 
         }
@@ -859,6 +879,7 @@ class meta_model(object):
 
     def meta_train_step(self, meta_dataset, meta_lr):
         feed_dict = {
+            self.keep_prob_ph: self.tkp,
             self.meta_input_ph: meta_dataset["x"], 
             self.guess_input_mask_ph: np.ones([len(meta_dataset["x"])]),
             self.lr_ph: meta_lr
