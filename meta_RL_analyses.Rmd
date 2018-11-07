@@ -8,8 +8,10 @@ library(tidyverse)
 ```
 
 ```{r}
-num_runs = 5
-results_dir = "results/results_h256/"
+num_runs = 20
+results_dir = "results/paper_results/"
+
+result_subdirs = c("basic", "nometa", "basic_su_heldout")
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -24,16 +26,19 @@ meta_classification_tasks = c("is_losers", "is_black_valuable", "is_suits_rule",
 # utils
 
 ```{r}
-load_d = function(results_dir, num_runs, file_type) {
+load_d = function(results_dir, result_subdirs, num_runs, file_type) {
   d = data.frame()
   for (run_i in 0:(num_runs-1)) {
-    filename = sprintf("%srun%i_%s.csv", results_dir, run_i, file_type)
-    if (!file.exists(filename)) {
-      next
-    }
-    this_d = read.csv(filename, header=T) %>%
-      mutate(run = run_i)
-    d = bind_rows(d, this_d)
+    for (result_subdir in result_subdirs) {
+      filename = sprintf("%s%s/run%i_%s.csv", results_dir, result_subdir, run_i, file_type)
+      if (!file.exists(filename)) {
+        next
+      }
+      this_d = read.csv(filename, header=T) %>%
+        mutate(run = run_i,
+               run_type=result_subdir)
+      d = bind_rows(d, this_d)
+      }
   }
   return(d)
 }
@@ -43,7 +48,7 @@ load_d = function(results_dir, num_runs, file_type) {
 # meta-learning tests
 
 ```{r}
-reward_d = load_d(results_dir, num_runs, "new_rewards")
+reward_d = load_d(results_dir, result_subdirs, num_runs, "new_rewards")
 
 reward_d = reward_d %>%
   gather(game_str, reward, starts_with("game")) %>%
@@ -58,7 +63,7 @@ reward_d = reward_d %>%
 avg_reward_d = reward_d %>%
   select(-game_str) %>%
   filter(epoch == 0) %>%
-  group_by(game_type, is_new_game) %>%
+  group_by(run_type, game_type, is_new_game) %>%
   summarize(avg_reward = mean(reward), sd_reward=sd(reward),
             se_reward = sd_reward/sqrt(n()), 
             ci_lo = avg_reward - 1.96*se_reward, 
@@ -74,26 +79,38 @@ theme_set(theme_bw() +
 ggplot(avg_reward_d, aes(x=game_type, fill=is_new_game, y=avg_reward)) +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
-  scale_fill_brewer(palette="Set2")
+  scale_fill_brewer(palette="Set2") +
+  facet_wrap(. ~ run_type)
 ```
+```{r}
+avg_reward_d %>% filter(is_new_game)
+```
+
+```{r}
+ggplot(avg_reward_d %>% filter(is_new_game, run_type %in% c("basic", "nometa")), aes(x=run_type, fill=run_type, y=avg_reward)) +
+  geom_bar(stat="identity", position="dodge") +
+  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge", width=0.5) +
+  scale_fill_brewer(palette="Set1")
+```
+
 
 # meta mapping (true) evaluation
 
 ```{r}
-meta_d = load_d(results_dir, num_runs, "new_meta_true_losses")
+meta_d = load_d(results_dir, c("basic", "basic_su_heldout"), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
   filter(epoch == 0) %>%
-  gather(map_str, reward, -c(run, epoch)) %>%
+  gather(map_str, reward, -c(run, run_type, epoch)) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
   mutate(is_new = source %in% new_game_strs | target %in% new_game_strs)
 ```
 
 ```{r}
 avg_meta_d = meta_d %>%
-  group_by(run, meta_task, is_new) %>%
+  group_by(run_type, run, meta_task, is_new) %>%
   summarize(avg_reward = mean(reward)) %>%
-  group_by(meta_task, is_new) %>%
+  group_by(run_type, meta_task, is_new) %>%
   summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward),
             se_reward = sd_avg_reward/sqrt(n()), 
             ci_lo = avg_avg_reward - 1.96*se_reward, 
@@ -105,32 +122,35 @@ avg_meta_d = meta_d %>%
 ggplot(avg_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
-  scale_fill_brewer(palette="Set2")
+  scale_fill_brewer(palette="Set2") +
+  facet_wrap(.~run_type)
 ```
 
 # embeddings
 
 ```{r}
-for (emb_type in c("guess", "final")) {
-  emb_d = data.frame()
-  for (run_i in 0:(num_runs-1)) {
-    filename = sprintf("%srun%i_%s_embeddings.csv", results_dir, run_i, emb_type)
-    if (!file.exists(filename)) {
-      next
+for (result_subdir in result_subdirs) {
+  for (emb_type in c("guess", "final")) {
+    emb_d = data.frame()
+    for (run_i in 0:(num_runs-1)) {
+      filename = sprintf("%s%s/run%i_%s_embeddings.csv", results_dir, result_subdir, run_i, emb_type)
+      if (!file.exists(filename)) {
+        next
+      }
+      this_d = read.csv(filename, header=T)
+      this_d$run = run_i
+      emb_d = bind_rows(emb_d, this_d)
     }
-    this_d = read.csv(filename, header=T)
-    this_d$run = run_i
-    emb_d = bind_rows(emb_d, this_d)
+    
+    pcs = prcomp(emb_d %>% select(-dimension, -run), center=T, scale=T)
+    pc_d = data.frame(pcs$rotation)
+    pc_d$task = row.names(pc_d)
+    ggplot(pc_d, aes(x=PC1, y=PC2, color=task)) +
+      geom_point() +
+      geom_text(aes(label=task)) +
+      guides(color=F)
+    ggsave(sprintf("plots/%s_PCA_full_%s.png", result_subdir, emb_type), width=7, height=7)
   }
-  
-  pcs = prcomp(emb_d %>% select(-dimension, -run), center=T, scale=T)
-  pc_d = data.frame(pcs$rotation)
-  pc_d$task = row.names(pc_d)
-  ggplot(pc_d, aes(x=PC1, y=PC2, color=task)) +
-    geom_point() +
-    geom_text(aes(label=task)) +
-    guides(color=F)
-  ggsave(sprintf("plots/PCA_full_%s.png", emb_type), width=7, height=7)
 }
 ```
 
