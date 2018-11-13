@@ -66,7 +66,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL//",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/basic_random_holdout/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -76,15 +76,16 @@ config = {
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
-    "new_tasks": [{"game": "straight_flush", "losers": True,
-                  "black_valuable": False, "suits_rule": False},
-		  {"game": "straight_flush", "losers": True,
-                  "black_valuable": True, "suits_rule": False},
-		  {"game": "straight_flush", "losers": True,
-                  "black_valuable": False, "suits_rule": True},
-		  {"game": "straight_flush", "losers": True,
-                  "black_valuable": True, "suits_rule": True}], # will be removed
-                                                                # from base tasks
+    "new_tasks": "random",
+#    "new_tasks": [{"game": "sum_under", "losers": True,
+#                  "black_valuable": False, "suits_rule": False},
+#		  {"game": "sum_under", "losers": True,
+#                  "black_valuable": True, "suits_rule": False},
+#		  {"game": "sum_under", "losers": True,
+#                  "black_valuable": False, "suits_rule": True},
+#		  {"game": "sum_under", "losers": True,
+#                  "black_valuable": True, "suits_rule": True}], # will be removed
+#                                                                # from base tasks
 
     "new_meta_tasks": [],
 
@@ -93,10 +94,16 @@ config = {
 }
 
 
+    
+
+
 config["base_meta_tasks"] = ["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
 config["base_meta_mappings"] = ["toggle_" + o for o in config["option_names"]]
 config["base_tasks"] = [{"game": g, "losers": l, "black_valuable": b,
                          "suits_rule": s} for g in config["game_types"] for l in config["losers"] for b in config["black_valuable"] for s in config["suits_rule"]]
+np.random.seed(0) # ideally would randomly assign each run, but that wuold require a little more work for the analysis
+if config["new_tasks"] == "random":
+    config["new_tasks"] = list(np.random.permutation(config["base_tasks"])[:len(config["base_tasks"])//2])
 config["base_tasks"] = [t for t in config["base_tasks"] if t not in config["new_tasks"]] # omit new
 
 ### END PARAMATERS (finally) ##################################
