@@ -33,7 +33,7 @@ config = {
                                      # else replaced with zeros
 
     "num_hidden": 64,
-    "num_hidden_hyper": 256,
+    "num_hidden_hyper": 512,
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
@@ -46,8 +46,8 @@ config = {
     "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
-    "min_learning_rate": 1e-7,
-    "min_meta_learning_rate": 1e-6,
+    "min_learning_rate": 3e-8,
+    "min_meta_learning_rate": 3e-7,
 
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
@@ -56,7 +56,7 @@ config = {
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
-    "train_drop_prob": 0.15, # dropout probability, applied on meta and hyper
+    "train_drop_prob": 0.00, # dropout probability, applied on meta and hyper
                              # but NOT task or input/output at present. Note
                              # that because of multiplicative effects and depth
                              # impact can be dramatic.
@@ -66,9 +66,12 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/results_h256_f64_dp15/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL//",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
+    "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
+                                                                # eval each at
+                                                                # training ends
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
@@ -613,9 +616,11 @@ class meta_model(object):
             buff.insert(encoded_hands, encoded_outcomes)
 
 
-    def _random_guess_mask(self, dataset_length):
+    def _random_guess_mask(self, dataset_length, meta_batch_size=None):
+        if meta_batch_size is None:
+            meta_batch_size = config["meta_batch_size"]
         mask = np.zeros(dataset_length, dtype=np.bool)
-        indices = np.random.permutation(dataset_length)[:config["meta_batch_size"]]
+        indices = np.random.permutation(dataset_length)[:meta_batch_size]
         mask[indices] = True
         return mask
 
@@ -653,12 +658,13 @@ class meta_model(object):
         return np.mean(rs)
 
 
-    def base_eval(self, game, memory_buffer, return_rewards=True):
+    def base_eval(self, game, memory_buffer, return_rewards=True, meta_batch_size=None):
         input_buff, output_buff = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
             self.base_input_ph: input_buff,
-            self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
+            self.guess_input_mask_ph: self._random_guess_mask(
+                self.memory_buffer_size, meta_batch_size=meta_batch_size),
             self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
             self.keep_prob_ph: 1.,
@@ -675,7 +681,8 @@ class meta_model(object):
         return res 
 
 
-    def run_base_eval(self, return_rewards=True, include_new=False):
+    def run_base_eval(self, return_rewards=True, include_new=False, sweep_meta_batch_sizes=False):
+        """sweep_meta_batch_sizes: False or a list of meta batch sizes to try"""
         if include_new:
             tasks = self.all_base_tasks
         else:
@@ -683,14 +690,31 @@ class meta_model(object):
 
         losses = [] 
         rewards = []
-        for task in tasks:
-            task_str = _stringify_game(task)
-            memory_buffer = self.memory_buffers[task_str]
-            game = self.games[task_str]
-            res = self.base_eval(game, memory_buffer, return_rewards=return_rewards)
-            losses.append(res[0])
-            if return_rewards:
-                rewards.append(res[1])
+        if sweep_meta_batch_sizes:
+            for meta_batch_size in sweep_meta_batch_sizes:
+                this_losses = [] 
+                this_rewards = []
+                for task in tasks:
+                    task_str = _stringify_game(task)
+                    memory_buffer = self.memory_buffers[task_str]
+                    game = self.games[task_str]
+                    res = self.base_eval(game, memory_buffer, 
+                                         return_rewards=return_rewards,
+                                         meta_batch_size=meta_batch_size)
+                    this_losses.append(res[0])
+                    if return_rewards:
+                        this_rewards.append(res[1])
+                losses.append(this_losses)
+                rewards.append(this_rewards)
+        else:
+            for task in tasks:
+                task_str = _stringify_game(task)
+                memory_buffer = self.memory_buffers[task_str]
+                game = self.games[task_str]
+                res = self.base_eval(game, memory_buffer, return_rewards=return_rewards)
+                losses.append(res[0])
+                if return_rewards:
+                    rewards.append(res[1])
 
         names = [_stringify_game(t) for t in tasks]
         if return_rewards:
@@ -901,6 +925,8 @@ class meta_model(object):
         config = self.config
         loss_filename = filename_prefix + "_losses.csv"
         reward_filename = filename_prefix + "_rewards.csv"
+        start_sweep_filename = filename_prefix + "start_sweep_rewards.csv"
+        end_sweep_filename = filename_prefix + "end_sweep_rewards.csv"
         meta_filename = filename_prefix + "_meta_true_losses.csv"
         with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta:
             base_names, base_losses, base_rewards = self.run_base_eval(
@@ -926,6 +952,14 @@ class meta_model(object):
             fout.write(curr_losses)
             fout_reward.write(curr_rewards)
             fout_meta.write(curr_meta_true)
+            if config["sweep_meta_batch_sizes"] is not None:
+                with open(start_sweep_filename, "w") as fout_sweep:
+                    sweep_names, sweep_losses, sweep_rewards = self.run_base_eval(
+                        include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
+                    fout_sweep.write("epoch, size, " + ", ".join(base_names) + "\n")
+                    for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
+                        swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
+                        fout_reward.write(swept_rewards)
 
             learning_rate = config["init_learning_rate"]
             meta_learning_rate = config["init_meta_learning_rate"]
@@ -985,6 +1019,14 @@ class meta_model(object):
 
                 if epoch % lr_decays_every == 0 and epoch > 0 and meta_learning_rate > min_meta_learning_rate:
                     meta_learning_rate *= meta_lr_decay
+
+            if config["sweep_meta_batch_sizes"] is not None:
+                with open(start_sweep_filename, "a") as fout_sweep:
+                    sweep_names, sweep_losses, sweep_rewards = self.run_base_eval(
+                        include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
+                    for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
+                        swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
+                        fout_reward.write(swept_rewards)
 
 
     def save_embeddings(self, filename, meta_task=None,
