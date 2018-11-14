@@ -966,7 +966,7 @@ class meta_model(object):
                     fout_sweep.write("epoch, size, " + ", ".join(base_names) + "\n")
                     for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
                         swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
-                        fout_reward.write(swept_rewards)
+                        fout_sweep.write(swept_rewards)
 
             learning_rate = config["init_learning_rate"]
             meta_learning_rate = config["init_meta_learning_rate"]
@@ -1033,7 +1033,7 @@ class meta_model(object):
                         include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
                     for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
                         swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
-                        fout_reward.write(swept_rewards)
+                        fout_sweep.write(swept_rewards)
 
 
     def save_embeddings(self, filename, meta_task=None,
