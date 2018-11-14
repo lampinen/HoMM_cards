@@ -932,8 +932,7 @@ class meta_model(object):
         config = self.config
         loss_filename = filename_prefix + "_losses.csv"
         reward_filename = filename_prefix + "_rewards.csv"
-        start_sweep_filename = filename_prefix + "start_sweep_rewards.csv"
-        end_sweep_filename = filename_prefix + "end_sweep_rewards.csv"
+        sweep_filename = filename_prefix + "_sweep_rewards.csv"
         meta_filename = filename_prefix + "_meta_true_losses.csv"
         with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta:
             base_names, base_losses, base_rewards = self.run_base_eval(
@@ -960,7 +959,7 @@ class meta_model(object):
             fout_reward.write(curr_rewards)
             fout_meta.write(curr_meta_true)
             if config["sweep_meta_batch_sizes"] is not None:
-                with open(start_sweep_filename, "w") as fout_sweep:
+                with open(sweep_filename, "w") as fout_sweep:
                     sweep_names, sweep_losses, sweep_rewards = self.run_base_eval(
                         include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
                     fout_sweep.write("epoch, size, " + ", ".join(base_names) + "\n")
@@ -1028,7 +1027,7 @@ class meta_model(object):
                     meta_learning_rate *= meta_lr_decay
 
             if config["sweep_meta_batch_sizes"] is not None:
-                with open(start_sweep_filename, "a") as fout_sweep:
+                with open(sweep_filename, "a") as fout_sweep:
                     sweep_names, sweep_losses, sweep_rewards = self.run_base_eval(
                         include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
                     for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
