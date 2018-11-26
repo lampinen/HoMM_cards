@@ -5,15 +5,14 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
-library
 ```
 
 ```{r}
-num_runs = 1
+num_runs = 7
 results_dir = "results/paper_results/"
 
-result_subdirs = c("nometa")#, "nometa_su_heldout", "nometa_random_holdout",
-                   #"basic", "basic_su_heldout", "basic_random_holdout")
+result_subdirs = c("nometa", "nometa_su_heldout", "nometa_random_holdout",
+                   "basic", "basic_su_heldout", "basic_random_holdout")
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -140,10 +139,21 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
   xlab("Meta Set Size") +
   facet_grid(game_type ~ run_type)
 ```
+
+```{r}
+ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=run_type, y=avg_reward)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
+  scale_color_brewer(palette="Set1") +
+  xlab("Meta Set Size") +
+  facet_grid(game_type ~ is_new_game)
+```
+
 # meta mapping (true) evaluation
 
 ```{r}
-meta_d = load_d(results_dir, c("basic", "basic_su_heldout"), num_runs, "new_meta_true_losses")
+meta_d = load_d(results_dir, c("basic", "basic_su_heldout", "basic_random_holdout"), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
   filter(epoch == 0) %>%
