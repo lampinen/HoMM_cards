@@ -15,7 +15,7 @@ pi = np.pi
 ### Parameters #################################################
 config = {
     "run_offset": 0,
-    "num_runs": 10,
+    "num_runs": 5,
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
     "suits_rule": [True, False],
@@ -66,7 +66,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/nometa_random_holdout_longer/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/basic_random_holdout_smaller/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -101,7 +101,7 @@ config["base_tasks"] = [{"game": g, "losers": l, "black_valuable": b,
                          "suits_rule": s} for g in config["game_types"] for l in config["losers"] for b in config["black_valuable"] for s in config["suits_rule"]]
 np.random.seed(0) # ideally would randomly assign each run, but that wuold require a little more work for the analysis
 if config["new_tasks"] == "random":
-    config["new_tasks"] = list(np.random.permutation(config["base_tasks"])[:len(config["base_tasks"])//2])
+    config["new_tasks"] = list(np.random.permutation(config["base_tasks"])[:2*(len(config["base_tasks"])//3)])
 config["base_tasks"] = [t for t in config["base_tasks"] if t not in config["new_tasks"]] # omit new
 
 ### END PARAMATERS (finally) ##################################
