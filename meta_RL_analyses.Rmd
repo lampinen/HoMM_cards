@@ -8,11 +8,11 @@ library(tidyverse)
 ```
 
 ```{r}
-num_runs = 7
+num_runs = 10
 results_dir = "results/paper_results/"
 
-result_subdirs = c("nometa", "nometa_su_heldout", "nometa_random_holdout",
-                   "basic", "basic_su_heldout", "basic_random_holdout")
+result_subdirs = c("nometa", "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one", 
+                   "basic", "basic_su_heldout", "basic_random_holdout_longer", "basic_only_one")
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -23,6 +23,8 @@ new_game_strs_su_heldout = c("game_sum_under_l_1_bv_0_sr_0",
                              "game_sum_under_l_1_bv_1_sr_0",
                              "game_sum_under_l_1_bv_0_sr_1",
                              "game_sum_under_l_1_bv_1_sr_1")
+
+new_game_strs_only_one = c('game_straight_flush_l_0_bv_1_sr_1', 'game_straight_flush_l_0_bv_1_sr_0', 'game_straight_flush_l_0_bv_0_sr_1', 'game_straight_flush_l_1_bv_0_sr_0', 'game_straight_flush_l_1_bv_1_sr_0', 'game_straight_flush_l_1_bv_0_sr_1', 'game_straight_flush_l_1_bv_1_sr_1')
 
 new_game_strs_random_heldout = c('game_match_l_0_bv_0_sr_1', 'game_match_l_0_bv_1_sr_1', 'game_pairs_and_high_l_1_bv_1_sr_0', 'game_high_card_l_0_bv_1_sr_1', 'game_straight_flush_l_1_bv_0_sr_1', 'game_straight_flush_l_0_bv_0_sr_0', 'game_pairs_and_high_l_0_bv_1_sr_1', 'game_straight_flush_l_1_bv_0_sr_0', 'game_match_l_1_bv_0_sr_1', 'game_pairs_and_high_l_0_bv_1_sr_0', 'game_pairs_and_high_l_1_bv_0_sr_0', 'game_sum_under_l_1_bv_0_sr_0', 'game_sum_under_l_0_bv_1_sr_0', 'game_high_card_l_1_bv_0_sr_1', 'game_sum_under_l_0_bv_0_sr_0', 'game_pairs_and_high_l_0_bv_0_sr_1', 'game_sum_under_l_1_bv_0_sr_1', 'game_match_l_1_bv_1_sr_1', 'game_sum_under_l_0_bv_1_sr_1', 'game_straight_flush_l_1_bv_1_sr_1')
 
@@ -61,13 +63,15 @@ reward_d = load_d(results_dir, result_subdirs, num_runs, "new_rewards")
 
 reward_d = reward_d %>%
   mutate(is_su_ho=grepl("su_heldout", run_type),
-         is_random_ho=grepl("random", run_type)) %>%
+         is_only_one=grepl("only_one", run_type),
+         is_random_ho=grepl("random", run_type),
+         is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
   gather(game_str, reward, starts_with("game")) %>%
   mutate(game_type = str_extract(game_str, "high_card|match|straight_flush|pairs_and_high|sum_under"),
          losers = grepl("l_1", game_str),
          black_valuable = grepl("bv_1", game_str),
          suits_rule = grepl("sr_1", game_str),
-         is_new_game = (!is_random_ho & !is_su_ho & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) )
+         is_new_game = (is_default & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) | (is_only_one & game_str %in% new_game_strs_only_one) )
 ```
 
 ```{r}
@@ -110,13 +114,15 @@ sweep_d = load_d(results_dir, result_subdirs, num_runs, "new_sweep_rewards")
 
 sweep_d = sweep_d %>%
   mutate(is_su_ho=grepl("su_heldout", run_type),
-         is_random_ho=grepl("random", run_type)) %>%
+         is_only_one=grepl("only_one", run_type),
+         is_random_ho=grepl("random", run_type),
+         is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
   gather(game_str, reward, starts_with("game")) %>%
   mutate(game_type = str_extract(game_str, "high_card|match|straight_flush|pairs_and_high|sum_under"),
          losers = grepl("l_1", game_str),
          black_valuable = grepl("bv_1", game_str),
          suits_rule = grepl("sr_1", game_str),
-         is_new_game = (!is_random_ho & !is_su_ho & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) )
+         is_new_game = (is_default & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) | (is_only_one & game_str %in% new_game_strs_only_one) )
 ```
 
 ```{r}
@@ -141,7 +147,7 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
 ```
 
 ```{r}
-ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=run_type, y=avg_reward)) +
+ggplot(avg_sweep_d %>% filter(run_type %in% c("basic_only_one", "nometa_only_one")), aes(x=size, color=run_type, y=avg_reward)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
@@ -153,14 +159,17 @@ ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, c
 # meta mapping (true) evaluation
 
 ```{r}
-meta_d = load_d(results_dir, c("basic", "basic_su_heldout", "basic_random_holdout"), num_runs, "new_meta_true_losses")
+meta_d = load_d(results_dir, c("basic", "basic_su_heldout", "basic_random_holdout_longer", "basic_only_one"), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
   filter(epoch == 0) %>%
-  mutate(is_su_ho=grepl("su_heldout", run_type)) %>%
-  gather(map_str, reward, -c(run, run_type, is_su_ho, epoch)) %>%
+  mutate(is_su_ho=grepl("su_heldout", run_type),
+         is_only_one=grepl("only_one", run_type),
+         is_random_ho=grepl("random", run_type),
+         is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
+  gather(map_str, reward, -c(run, run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
-  mutate(is_new = (!is_su_ho & (source %in% new_game_strs | target %in% new_game_strs)) | (is_su_ho & (source %in% new_game_strs_su_heldout | target %in% new_game_strs_su_heldout)))
+  mutate(is_new = (is_default & (source %in% new_game_strs | target %in% new_game_strs)) | (is_random_ho & (source %in% new_game_strs_random_heldout | target %in% new_game_strs_random_heldout)) | (is_only_one & (source %in% new_game_strs_only_one | target %in% new_game_strs_only_one)) | (is_su_ho & (source %in% new_game_strs_su_heldout | target %in% new_game_strs_su_heldout)))
 ```
 
 ```{r}
@@ -236,8 +245,4 @@ for (result_subdir in result_subdirs) {
 #     emb_d = bind_rows(emb_d, this_d)
 #   }
 # }
-```
-
-```{r}
-
 ```
