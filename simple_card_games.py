@@ -32,6 +32,7 @@ class card_game(object):
     instead lose an equal amount, and vice versa."""
     def __init__(self, game_type, black_valuable=True, suits_rule=False,
                  losers=False):
+        self.game_type = game_type
         self.black_valuable = black_valuable
         self.suits_rule = suits_rule
         suit_mult = 0.5 if not suits_rule else 4
@@ -123,15 +124,29 @@ class card_game(object):
             return -bet
 
 
-    def compute_expected_return(self, max_bet=2.):
+    def compute_expected_return(self, max_bet=2., policy=None):
+        """If policy is None, computes the optimal expected return. If not,
+        policy should be a dictionary indexed by hands that gives bets."""
         r = 0.
-        for hand in self.hands:
-            wp = self.hand_to_win_prob[hand]
-            if wp > 0.5:
-                r += wp*max_bet - (1-wp)*max_bet
+        if policy is None:
+            for hand in self.hands:
+                wp = self.hand_to_win_prob[hand]
+                if wp > 0.5:
+                    r += wp*max_bet - (1-wp)*max_bet
+        else:
+            for hand in self.hands:
+                bet = policy[hand]
+                wp = self.hand_to_win_prob[hand]
+                r += wp*bet - (1-wp)*bet
 
         r /= len(self.hands)
         return r
+
+
+def _stringify_game(t):
+    """Helper for printing, etc."""
+    return "game_%s_l_%i_bv_%i_sr_%i" % (t.game_type, t.losers,
+                                         t.black_valuable, t.suits_rule)
 
         
 ### simple tests
