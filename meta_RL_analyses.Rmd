@@ -34,7 +34,7 @@ meta_classification_tasks = c("is_losers", "is_black_valuable", "is_suits_rule",
                               "is_high_card", "is_match", "is_straight_flush", "is_pairs_and_high", "is_sum_under")
 ```
 
-# utils
+# utils and setup
 
 ```{r}
 load_d = function(results_dir, result_subdirs, num_runs, file_type) {
@@ -55,6 +55,43 @@ load_d = function(results_dir, result_subdirs, num_runs, file_type) {
 }
 ```
 
+plot themes
+```{r}
+theme_set(theme_bw() + 
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()))
+```
+
+```{r}
+summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, palette="Set2") {
+  p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +
+    geom_hline(yintercept=0., linetype=2, alpha=0.5) +
+    geom_point(stat="summary", fun.y=mean, size=2) +
+    geom_errorbar(stat="summary", 
+                  fun.ymin=function(x) {mean(x) - 1.96*sd(x)/sqrt(length(x))},
+                  fun.ymax=function(x) {mean(x) + 1.96*sd(x)/sqrt(length(x))},
+                  width=0.25) +
+    scale_color_brewer(palette=palette)
+    
+  if (!is.null(baseline_data)) {
+    p = p + 
+      annotate("segment",
+               x=(1:5)-0.5, xend=(1:5)+0.5,
+               y=simple_baselines$expected_reward,
+               yend=simple_baselines$expected_reward,
+               linetype=3, alpha=0.5) 
+  }
+  
+  return(p)
+}
+```
+
+```{r}
+baseline_data = read_csv("baseline_data.csv") %>%
+  mutate(game_type = str_extract(game, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+         losers = grepl("l_1", game),
+         black_valuable = grepl("bv_1", game),
+         suits_rule = grepl("sr_1", game))
+```
 
 # meta-learning tests
 
@@ -86,9 +123,19 @@ avg_reward_d = reward_d %>%
 ```
 
 ```{r}
-theme_set(theme_bw() + 
-            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()))
+simple_baselines = baseline_data %>% 
+  filter(policy == "optimal") %>%
+  group_by(game_type) %>%
+  summarize(expected_reward = mean(expected_reward)) %>%
+  ungroup()
+
+summary_plot(reward_d %>%
+               filter(epoch == 0),
+             "game_type", "reward", "is_new_game",
+             simple_baselines) +
+  facet_wrap(. ~ run_type)
 ```
+
 
 ```{r}
 ggplot(avg_reward_d, aes(x=game_type, fill=is_new_game, y=avg_reward)) +
@@ -147,7 +194,7 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
 ```
 
 ```{r}
-ggplot(avg_sweep_d %>% filter(run_type %in% c("basic_only_one", "nometa_only_one")), aes(x=size, color=run_type, y=avg_reward)) +
+ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=run_type, y=avg_reward)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
@@ -207,6 +254,15 @@ for (result_subdir in result_subdirs) {
       this_d$run = run_i
       emb_d = bind_rows(emb_d, this_d)
     }
+    
+    pcs = prcomp(emb_d %>% select(-dimension, -run, -starts_with("is"), -starts_with("toggle")), center=T, scale=T)
+    pc_d = data.frame(pcs$rotation)
+    pc_d$task = row.names(pc_d)
+    ggplot(pc_d, aes(x=PC1, y=PC2, color=task)) +
+      geom_point() +
+      geom_text(aes(label=task)) +
+      guides(color=F)
+    ggsave(sprintf("plots/%s_PCA_basic_%s.png", result_subdir, emb_type), width=7, height=7)
     
     pcs = prcomp(emb_d %>% select(-dimension, -run), center=T, scale=T)
     pc_d = data.frame(pcs$rotation)
