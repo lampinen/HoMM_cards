@@ -23,9 +23,9 @@
 \begin{document}
 
 \section{Introduction}
-Humans are able to use and reuse knowledge more flexibly than most deep learning models can \citep{Lake2017}. One fundamental reason for this is the siloing of knowledge within deep neural networks -- although deep networks represent knowledge about data (activations) and knowledge about transformations of that data (parameters), they do not represent any relationships between these. By contrast, humans are (or can be) consciously aware of both our representations of input, the transformations we can perform on them, and the relationships between data and functions on the data. This is true for domains from game playing to natural language understanding. \par
-One of the abilities that this grants humans is the ability to learn rapidly from relatively few examples. This problem has been partially addressed by meta-learning systems \citep{}. Yet humans can then take this knowledge and flexibly alter their behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance \textbf{without any retraining} (i.e. zero-shot). Deep learning systems at present lack this representational flexiblity. \par
-In this paper, we propose a new class of architectures which essentially take a \textbf{functional perspective} on meta-learning. By treating both data and transformations on the data as functions, we can conceptually think of both data \textbf{and} learned functions as transformable. This yields the ability to not just learn to solve new tasks, but to learn how to flexibly transform these solutions in response to changing task demands. We suggest that this ability will be key to building more intelligent deep learning systems. \par
+Humans are able to use and reuse knowledge more flexibly than most deep learning models can \citep{Lake2017}. One fundamental reason for this is the separation of knowledge within deep neural networks -- although deep networks represent knowledge about data (in their activations) and knowledge about the structure of tasks (in their parameters), they do not represent any relationships between these. That is, neural networks knowledge about \textbf{what} is being computed is \textbf{inaccessible} by the computations. By contrast, humans are frequently consciously aware of both our representations of input, the things we can do with them, and the relationships between data and tasks. This is true for domains from game playing to natural language understanding. \par
+One of the abilities that this grants humans is rapid adaptation of our behavior. The problem of rapid learning has been partially addressed by meta-learning systems \citep{}. However, humans can take rapidly acquired knowledge and flexibly alter their behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance \textbf{without any retraining} (i.e. zero-shot). Deep learning systems at present lack this representational flexiblity. \par
+In this paper, we propose a new class of architectures which essentially take a \textbf{functional perspective} on meta-learning. By treating both data and tasks as functions, we can conceptually think of both data \textbf{and} learned functions as transformable. This yields the ability to not just learn to solve new tasks, but to learn how to flexibly transform these solutions in response to changing task demands. We suggest that this ability will be key to building more intelligent and flexible deep learning systems. \par
 
 \section{Method}
 \subsection{Architecture}
@@ -109,7 +109,7 @@ $\vdots$
 
 \section{Experiments}
 
-\subsection{A toy demonstration: boolean functions}
+\subsection{Boolean functions}
 As a proof of concept, we first evaluated the system on a simple task of computing boolean functions on boolean inputs. Specifically, we can imagine mapping from binary-valued input vectors to a single binary output representing the evaluation of some logical proposition on the input. We train the system to figure out how to compute the predicate from seeing a subset of the (input, output) pairs. \par   
 We can then train the system to do various meta-mappings, for example identifying certain types of functions (like XOR) or negating predicates. \par
 
@@ -120,16 +120,16 @@ Our next case study was in the setting of simple card games, played with two sui
 \item \textbf{Pairs and high:} Same as high card, except pairs are more valuable, and same suit pairs are even more valuable.
 \item \textbf{Straight flush:} Most valuable is adjacent numbers in same suit, i.e. 4 and 3 in most valuable suit wins every time (royal flush).
 \item \textbf{Match:} the hand with cards that differ least in value (suit counts as 0.5 pt difference) wins.
-\item \textbf{Sum under (blackjack):} The rank increases with the sum of the cards until it crosses 5, at which point the player ``goes bust,'' and rank drops below any smaller sum.
+\item \textbf{Sum under:} The hand's value increases with the sum of the cards until it crosses 5, at which point the player ``goes bust,'' and the value becomes negative. 
 \end{itemize}
-We also considered three binary options that could be altered to produce variants of these games:
+These games are simplified analogs of various card games, including poker and blackjack. We also considered three binary options that could be altered to produce variants of these games:
 \begin{itemize}
 \item \textbf{Losers:} Try to lose instead of winning! Reverses the ranking of hands.
 \item \textbf{Suits rule:} Instead of suits being less important than values, they are more important (essentially flipping the role of suit and value in most games).
 \item \textbf{Switch suit:} Switches which of the suits is more valuable.
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. \par
-In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-style approach to predict rewards for each bet in each state. The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples. \par   
+In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{} to predict rewards for each bet in each state. The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples. \par   
 We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. \par
 
 \section{Discussion}
