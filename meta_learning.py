@@ -66,7 +66,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/basic_only_one_ho/",
+    "output_dir": "./temp_results/",#"/mnt/fs2/lampinen/meta_RL/paper_results/language/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -105,6 +105,26 @@ def _stringify_game(t):
     """Helper for printing, etc."""
     return "game_%s_l_%i_bv_%i_sr_%i" % (t["game"], t["losers"],
                                          t["black_valuable"], t["suits_rule"])
+
+def _wordify_task(t):
+    """For input to NLP module"""
+    if type(t) == str:
+        words = ["meta"] + t.split("_", 1)
+    else: # base tasks are dict
+        words = ["base", t["game"]] 
+        if t["losers"]:
+            words.append("losers")
+        else:
+            words.extend(["not", "losers"])
+        if t["black_valuable"]:
+            words.append("black_valuable")
+        else:
+            words.extend(["not", "black_valuable"])
+        if t["suits_rule"]:
+            words.append("suits_rule")
+        else:
+            words.extend(["not", "suits_rule"])
+    return words 
 
 
 def _save_config(filename, config):
@@ -211,6 +231,7 @@ class meta_model(object):
         self.new_task_names = [_stringify_game(t) for t in new_tasks]
 
         self.all_base_tasks = self.base_tasks + self.new_tasks
+
         self.memory_buffers = {_stringify_game(t): memory_buffer(
             self.memory_buffer_size, self.num_input,
             self.num_outcome) for t in self.all_base_tasks}
@@ -232,6 +253,10 @@ class meta_model(object):
         self.all_initial_tasks = self.base_tasks + self.all_base_meta_tasks 
         self.all_new_tasks = self.new_tasks + self.new_meta_tasks
         self.all_tasks = self.all_initial_tasks + self.all_new_tasks
+        self.wordified_tasks = {_stringify_game(t): _wordify_task(t) for t in self.all_base_tasks}
+        self.wordified_tasks.update({t: _wordify_task(t) for t in self.all_meta_tasks})
+        self.vocab = set([x for l in self.wordified_tasks.values() for x in l])
+
         # think that's enough redundant variables?
         self.num_tasks = num_tasks = len(self.all_tasks)
 
