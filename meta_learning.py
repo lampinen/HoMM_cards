@@ -255,7 +255,11 @@ class meta_model(object):
         self.all_tasks = self.all_initial_tasks + self.all_new_tasks
         self.wordified_tasks = {_stringify_game(t): _wordify_task(t) for t in self.all_base_tasks}
         self.wordified_tasks.update({t: _wordify_task(t) for t in self.all_meta_tasks})
-        self.vocab = set([x for l in self.wordified_tasks.values() for x in l])
+        self.max_sentence_len = max([len(l) for l in self.wordified_tasks.values()])
+        self.vocab = list(set([x for l in self.wordified_tasks.values() for x in l])) + ["PAD"]
+        self.vocab_size = len(self.vocab)
+        pad_index = self.vocab.index("PAD")
+        self.intified_tasks = {k: [pad_index]*(self.max_sentence_len - len(v)) + [self.vocab.index(w) for w in v] for k, v in self.wordified_tasks.items()} 
 
         # think that's enough redundant variables?
         self.num_tasks = num_tasks = len(self.all_tasks)
@@ -384,6 +388,40 @@ class meta_model(object):
                                                        self.meta_target_ph)
 
 
+        # language processing: lang -> emb
+        self.language_input_ph = tf.placeholder(
+            tf.int32, shape=[None, self.max_sentence_len])
+        with tf.variable_scope("word_embeddings", reuse=False):
+            self.word_embeddings = tf.get_variable(
+                "embeddings", shape=[self.vocab_size, num_hidden_hyper])
+        self.embedded_language = tf.nn.embedding_lookup(self.word_embeddings,
+                                                        self.language_input_ph)
+
+        def _language_network(embedded_language, reuse=True):
+            """Maps from language to a function embedding"""
+            with tf.variable_scope("language_processing"):
+                cell = tf.contrib.rnn.LSTMCell(num_hidden_hyper)
+                state = cell.zero_state(tf.shape(embedded_language)[0],
+                    dtype=tf.float32)
+
+                for i in range(self.max_sentence_len):
+                    cell_output, state = cell(embedded_language[:, i, :], state)
+
+                language_hidden = slim.fully_connected(
+                    cell_output, num_hidden_hyper,
+                    activation_fn=internal_nonlinearity)
+
+                func_embeddings = slim.fully_connected(language_hidden, 
+                                                       num_hidden_hyper,
+                                                       activation_fn=None)
+            return func_embeddings
+
+        self.language_function_emb = _language_network(self.embedded_language,
+                                                       False)
+
+        #print(self.language_function_emb)
+
+
         # hyper_network: emb -> (f: emb -> emb) 
         self.feed_embedding_ph = tf.placeholder(np.float32,
                                                 [1, num_hidden_hyper])
@@ -447,6 +485,10 @@ class meta_model(object):
         self.meta_t_task_params = _hyper_network(self.guess_meta_t_function_emb)
         self.meta_m_task_params = _hyper_network(self.guess_meta_m_function_emb)
         self.fed_emb_task_params = _hyper_network(self.feed_embedding_ph)
+        self.language_task_params = _hyper_network(self.language_function_emb)
+        print(self.base_task_params)
+        print(self.language_task_params)
+        exit()
 
         # task network
         def _task_network(task_params, processed_input):
