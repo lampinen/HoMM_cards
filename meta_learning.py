@@ -486,9 +486,6 @@ class meta_model(object):
         self.meta_m_task_params = _hyper_network(self.guess_meta_m_function_emb)
         self.fed_emb_task_params = _hyper_network(self.feed_embedding_ph)
         self.language_task_params = _hyper_network(self.language_function_emb)
-        print(self.base_task_params)
-        print(self.language_task_params)
-        exit()
 
         # task network
         def _task_network(task_params, processed_input):
@@ -519,7 +516,15 @@ class meta_model(object):
         self.meta_t_output = tf.nn.sigmoid(self.meta_t_raw_output)
 
         self.meta_m_output = _task_network(self.meta_m_task_params,
-                                               self.meta_input_ph)
+                                           self.meta_input_ph)
+
+        self.base_raw_output_language = _task_network(self.language_task_params,
+                                                 processed_input)
+        self.base_output_language = _output_mapping(self.base_raw_output_language)
+        self.base_output_softmax_language = tf.nn.softmax(
+            config["softmax_beta"] * self.base_output_language)
+
+        # TODO: language for meta tasks & mappings 
 
         # have to mask base output because can only learn about the action 
         # actually taken
@@ -528,6 +533,8 @@ class meta_model(object):
         masked_base_output = tf.boolean_mask(self.base_output,
                                              self.base_target_mask_ph)
         masked_base_fed_emb_output = tf.boolean_mask(self.base_output_fed_emb,
+                                                     self.base_target_mask_ph)
+        masked_base_language_output = tf.boolean_mask(self.base_output_language,
                                                      self.base_target_mask_ph)
         masked_base_target = tf.boolean_mask(self.base_target_ph,
                                              self.base_target_mask_ph)
@@ -538,6 +545,10 @@ class meta_model(object):
         self.base_fed_emb_loss = tf.square(
             masked_base_fed_emb_output - masked_base_target)
         self.total_base_fed_emb_loss = tf.reduce_mean(self.base_fed_emb_loss)
+
+        self.base_language_loss = tf.square(
+            masked_base_language_output - masked_base_target)
+        self.total_base_language_loss = tf.reduce_mean(self.base_language_loss)
 
         self.meta_t_loss = tf.reduce_sum(
             tf.square(self.meta_t_output - processed_class), axis=1)
@@ -551,6 +562,8 @@ class meta_model(object):
         optimizer = tf.train.RMSPropOptimizer(self.lr_ph)
 
         self.base_train = optimizer.minimize(self.total_base_loss)
+        self.base_language_train = optimizer.minimize(
+            self.total_base_language_loss)
         self.meta_t_train = optimizer.minimize(self.total_meta_t_loss)
         self.meta_m_train = optimizer.minimize(self.total_meta_m_loss)
 
