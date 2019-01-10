@@ -52,8 +52,8 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 60000,
-    "max_new_epochs": 1000,
+    "max_base_epochs": 10,#60000,
+    "max_new_epochs": 10,#1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
     "train_drop_prob": 0.00, # dropout probability, applied on meta and hyper
@@ -82,6 +82,9 @@ config = {
                                                                   # from base tasks
 
     "new_meta_tasks": [],
+    
+    "train_language": True, # whether to train language as well (only language
+                            # inputs and only base tasks, for now)
 
     "internal_nonlinearity": tf.nn.leaky_relu,
     "output_nonlinearity": None
@@ -259,7 +262,7 @@ class meta_model(object):
         self.vocab = list(set([x for l in self.wordified_tasks.values() for x in l])) + ["PAD"]
         self.vocab_size = len(self.vocab)
         pad_index = self.vocab.index("PAD")
-        self.intified_tasks = {k: [pad_index]*(self.max_sentence_len - len(v)) + [self.vocab.index(w) for w in v] for k, v in self.wordified_tasks.items()} 
+        self.intified_tasks = {k: [[pad_index]*(self.max_sentence_len - len(v)) + [self.vocab.index(w) for w in v]] for k, v in self.wordified_tasks.items()} 
 
         # think that's enough redundant variables?
         self.num_tasks = num_tasks = len(self.all_tasks)
@@ -389,8 +392,9 @@ class meta_model(object):
 
 
         # language processing: lang -> emb
+        # TODO: only create these if training language, for memory efficiency 
         self.language_input_ph = tf.placeholder(
-            tf.int32, shape=[None, self.max_sentence_len])
+            tf.int32, shape=[1, self.max_sentence_len])
         with tf.variable_scope("word_embeddings", reuse=False):
             self.word_embeddings = tf.get_variable(
                 "embeddings", shape=[self.vocab_size, num_hidden_hyper])
@@ -401,8 +405,7 @@ class meta_model(object):
             """Maps from language to a function embedding"""
             with tf.variable_scope("language_processing"):
                 cell = tf.contrib.rnn.LSTMCell(num_hidden_hyper)
-                state = cell.zero_state(tf.shape(embedded_language)[0],
-                    dtype=tf.float32)
+                state = cell.zero_state(1, dtype=tf.float32)
 
                 for i in range(self.max_sentence_len):
                     cell_output, state = cell(embedded_language[:, i, :], state)
@@ -728,6 +731,21 @@ class meta_model(object):
         self.sess.run(self.base_train, feed_dict=feed_dict)
 
 
+    def base_language_train_step(self, intified_task, memory_buffer, lr):
+        input_buff, output_buff = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.base_input_ph: input_buff,
+            self.language_input_ph: intified_task,
+            self.base_outcome_ph: output_buff,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask,
+            self.keep_prob_ph: self.tkp,
+            self.lr_ph: lr
+        }
+        self.sess.run(self.base_language_train, feed_dict=feed_dict)
+
+
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
         if encoded_hands is not None:
             hands = self.decode_hands(encoded_hands)
@@ -802,6 +820,53 @@ class meta_model(object):
         else:
             return names, losses
 
+    
+    def base_language_eval(self, game, intified_task, memory_buffer, return_rewards=True):
+        input_buff, output_buff = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.keep_prob_ph: 1.,
+            self.language_input_ph: intified_task,
+            self.base_input_ph: input_buff,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask
+        }
+        fetches = [self.total_base_language_loss]
+        if return_rewards:
+            fetches.append(self.base_output_softmax_language)
+        res = self.sess.run(fetches, feed_dict=feed_dict)
+        if return_rewards:
+            loss, act_probs = res
+            avg_reward = self.reward_eval_helper(game, act_probs, input_buff[:, :12])
+            return loss, avg_reward 
+        else:
+            return res
+
+
+    def run_base_language_eval(self, return_rewards=True, include_new=False):
+        if include_new:
+            tasks = self.all_base_tasks
+        else:
+            tasks = self.base_tasks
+
+        losses = [] 
+        rewards = []
+        for task in tasks:
+            task_str = _stringify_game(task)
+            intified_task = self.intified_tasks[task_str]
+            memory_buffer = self.memory_buffers[task_str]
+            game = self.games[task_str]
+            res = self.base_language_eval(game, intified_task, memory_buffer, return_rewards=return_rewards)
+            losses.append(res[0])
+            if return_rewards:
+                rewards.append(res[1])
+
+        names = [_stringify_game(t) for t in tasks]
+        if return_rewards:
+            return names, losses, rewards
+        else:
+            return names, losses
+
 
     def base_embedding_eval(self, embedding, game, memory_buffer, return_rewards=True):
         input_buff, output_buff = memory_buffer.get_memories()
@@ -835,6 +900,15 @@ class meta_model(object):
             self.base_outcome_ph: output_buff
         }
         res = self.sess.run(self.guess_base_function_emb, feed_dict=feed_dict)
+        return res
+
+
+    def get_language_embedding(self, intified_task):
+        feed_dict = {
+            self.keep_prob_ph: 1.,
+            self.language_input_ph: intified_task
+        }
+        res = self.sess.run(self.language_function_emb, feed_dict=feed_dict)
         return res
 
 
@@ -1007,7 +1081,9 @@ class meta_model(object):
         reward_filename = filename_prefix + "_rewards.csv"
         sweep_filename = filename_prefix + "_sweep_rewards.csv"
         meta_filename = filename_prefix + "_meta_true_losses.csv"
-        with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta:
+        lang_filename = filename_prefix + "_language_losses.csv"
+        lang_reward_filename = filename_prefix + "_language_rewards.csv"
+        with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta, open(lang_filename, "w") as fout_lang, open(lang_reward_filename, "w") as fout_lang_reward:
             base_names, base_losses, base_rewards = self.run_base_eval(
                 include_new=include_new)
             meta_names, meta_losses = self.run_meta_loss_eval(
@@ -1022,15 +1098,35 @@ class meta_model(object):
             loss_format = ", ".join(["%f" for _ in base_names + meta_names]) + "\n"
             reward_format = ", ".join(["%f" for _ in base_names]) + "\n"
             meta_true_format = ", ".join(["%f" for _ in meta_true_names]) + "\n"
+            
+            train_language = config["train_language"]
+            if train_language:
+                (base_lang_names, base_lang_losses, 
+                 base_lang_rewards) = self.run_base_language_eval(
+                    include_new=include_new)
+                fout_lang.write("epoch, " + ", ".join(base_lang_names) + "\n")
+                fout_lang_reward.write("epoch, " + ", ".join(base_lang_names) + "\n")
+                lang_loss_format = ", ".join(["%f" for _ in base_lang_names]) + "\n"
+                lang_reward_format = ", ".join(["%f" for _ in base_lang_names]) + "\n"
 
             s_epoch  = "0, "
             curr_losses = s_epoch + (loss_format % tuple(
                 base_losses + meta_losses))
             curr_rewards = s_epoch + (reward_format % tuple(base_rewards))
-            curr_meta_true = s_epoch + (meta_true_format % tuple(meta_true_losses))
+            curr_meta_true = s_epoch + (meta_true_format % tuple(
+                meta_true_losses))
             fout.write(curr_losses)
             fout_reward.write(curr_rewards)
             fout_meta.write(curr_meta_true)
+
+            if train_language:
+                curr_lang_losses = s_epoch + (lang_loss_format % tuple(
+                    base_lang_losses))
+                curr_lang_rewards = s_epoch + (lang_reward_format % tuple(
+                    base_lang_rewards))
+                fout_lang.write(curr_lang_losses)
+                fout_lang_reward.write(curr_lang_rewards)
+
             if config["sweep_meta_batch_sizes"] is not None:
                 with open(sweep_filename, "w") as fout_sweep:
                     sweep_names, sweep_losses, sweep_rewards = self.run_base_eval(
@@ -1055,6 +1151,7 @@ class meta_model(object):
             meta_lr_decay = config["meta_lr_decay"]
             min_learning_rate = config["min_learning_rate"]
             min_meta_learning_rate = config["min_meta_learning_rate"]
+            train_language = config["train_language"]
             for epoch in range(1, num_epochs+1):
                 if epoch % config["refresh_mem_buffs_every"] == 0:
                     self.play_games(num_turns=config["memory_buffer_size"],
@@ -1070,8 +1167,13 @@ class meta_model(object):
                         dataset = self.meta_dataset_cache[task]
                         self.meta_train_step(dataset, meta_learning_rate)
                     else:
-                        memory_buffer = self.memory_buffers[_stringify_game(task)]
+                        str_task = _stringify_game(task)
+                        memory_buffer = self.memory_buffers[str_task]
                         self.base_train_step(memory_buffer, learning_rate)
+                        if train_language: 
+                            intified_task = self.intified_tasks[str_task]
+                            self.base_language_train_step(
+                                intified_task, memory_buffer, learning_rate)
 
                 if epoch % save_every == 0:
                     s_epoch  = "%i, " % epoch
@@ -1088,8 +1190,15 @@ class meta_model(object):
                     fout.write(curr_losses)
                     fout_reward.write(curr_rewards)
                     fout_meta.write(curr_meta_true)
-                    print(curr_losses)
-                    if np.all(curr_losses < early_stopping_thresh):
+                    if train_language:
+                        curr_lang_losses = s_epoch + (lang_loss_format % tuple(
+                            base_lang_losses))
+                        curr_lang_rewards = s_epoch + (lang_reward_format % tuple(
+                            base_lang_rewards))
+                        fout_lang.write(curr_lang_losses)
+                        fout_lang_reward.write(curr_lang_rewards)
+                    print(curr_losses, curr_lang_losses)
+                    if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
                         print("Early stop!")
                         break
 
@@ -1109,11 +1218,12 @@ class meta_model(object):
 
 
     def save_embeddings(self, filename, meta_task=None,
-                        include_new=False):
+                        include_new=False, language=False):
         """Saves all task embeddings, if meta_task is not None first computes
            meta_task mapping on them. If include_new, will include new tasks
            (note that this has a complicated pattern of effects, since they 
-           will be included in meta datasets as well)."""
+           will be included in meta datasets as well). If language, embeddings
+           will be computed from language, rather than meta network."""
         with open(filename, "w") as fout:
             if include_new:
                 tasks = [_stringify_game(t) for t in self.base_tasks]
@@ -1128,12 +1238,20 @@ class meta_model(object):
 
             for task_i, task in enumerate(tasks):
                 if task in self.all_meta_tasks:
+                    if language:
+                        # TODO: update if/when language includes meta tasks
+                        continue
+
                     dataset = self.get_meta_dataset(
                         task, include_new=include_new)
                     embedding = self.get_meta_embedding(dataset) 
                 else:
-                    memory_buffer = self.memory_buffers[task]
-                    embedding = self.get_base_embedding(memory_buffer) 
+                    if language:
+                        intified_task = self.intified_tasks[task]
+                        embedding = self.get_language_embedding(intified_task)
+                    else:
+                        memory_buffer = self.memory_buffers[task]
+                        embedding = self.get_base_embedding(memory_buffer) 
 
                 task_embeddings[task_i, :] = embedding 
 
@@ -1188,11 +1306,15 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
     model = meta_model(config) 
     model.save_embeddings(filename=filename_prefix + "_init_embeddings.csv",
                           include_new=False)
+    model.save_embeddings(filename=filename_prefix + "_init_language_embeddings.csv",
+                          include_new=False)
     model.run_training(filename_prefix=filename_prefix,
                        num_epochs=config["max_base_epochs"],
                        include_new=False)
     model.save_embeddings(filename=filename_prefix + "_guess_embeddings.csv",
                           include_new=True)
+    model.save_embeddings(filename=filename_prefix + "_guess_language_embeddings.csv",
+                          include_new=True, language=True)
     if config["eval_all_hands"]:
         model.eval_all_games_all_hands(directory=config["output_dir"] + "/guess_hand_actions/run%i/" % run_i,
                                        include_new=True)
@@ -1208,6 +1330,8 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
 
     model.save_embeddings(filename=filename_prefix + "_final_embeddings.csv",
                           include_new=True)
+    model.save_embeddings(filename=filename_prefix + "_final_language_embeddings.csv",
+                          include_new=True, language=True)
     for meta_task in config["base_meta_mappings"]:
         model.save_embeddings(filename=filename_prefix + "_" + meta_task + "_final_embeddings.csv",
                               meta_task=meta_task,
