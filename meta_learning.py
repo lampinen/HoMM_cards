@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "./temp_results/", #"/mnt/fs2/lampinen/meta_RL/paper_results/language/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/language_1e-2_0.75/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -736,7 +736,6 @@ class meta_model(object):
 
 
     def base_language_train_step(self, intified_task, memory_buffer, lr):
-        print("Language train")
         input_buff, output_buff = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
@@ -748,9 +747,7 @@ class meta_model(object):
             self.keep_prob_ph: self.tkp,
             self.lr_ph: lr
         }
-        print(self.sess.run(self.base_language_loss, feed_dict=feed_dict))
         self.sess.run(self.base_language_train, feed_dict=feed_dict)
-        print(self.sess.run(self.base_language_loss, feed_dict=feed_dict))
 
 
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
@@ -1212,7 +1209,7 @@ class meta_model(object):
                         print("Early stop!")
                         break
 
-                if epoch % lr_decays_every == 0 and epoch > 0
+                if epoch % lr_decays_every == 0 and epoch > 0:
                     if learning_rate > min_learning_rate:
                         learning_rate *= lr_decay
 
