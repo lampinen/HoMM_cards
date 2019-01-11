@@ -37,16 +37,20 @@ config = {
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
+    "init_language_learning_rate": 1e-2,
     "init_meta_learning_rate": 1e-4,
 
     "new_init_learning_rate": 1e-6,
+    "new_init_language_learning_rate": 1e-6,
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
+    "language_lr_decay": 0.75,
     "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
     "min_learning_rate": 3e-8,
+    "min_language_learning_rate": 3e-8,
     "min_meta_learning_rate": 3e-7,
 
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
@@ -66,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
+    "output_dir": "./temp_results/", #"/mnt/fs2/lampinen/meta_RL/paper_results/language/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -732,6 +736,7 @@ class meta_model(object):
 
 
     def base_language_train_step(self, intified_task, memory_buffer, lr):
+        print("Language train")
         input_buff, output_buff = memory_buffer.get_memories()
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
@@ -743,7 +748,9 @@ class meta_model(object):
             self.keep_prob_ph: self.tkp,
             self.lr_ph: lr
         }
+        print(self.sess.run(self.base_language_loss, feed_dict=feed_dict))
         self.sess.run(self.base_language_train, feed_dict=feed_dict)
+        print(self.sess.run(self.base_language_loss, feed_dict=feed_dict))
 
 
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
@@ -1138,6 +1145,7 @@ class meta_model(object):
 
             learning_rate = config["init_learning_rate"]
             meta_learning_rate = config["init_meta_learning_rate"]
+            language_learning_rate = config["init_language_learning_rate"]
 
             if include_new:
                 tasks = self.all_tasks
@@ -1151,6 +1159,7 @@ class meta_model(object):
             meta_lr_decay = config["meta_lr_decay"]
             min_learning_rate = config["min_learning_rate"]
             min_meta_learning_rate = config["min_meta_learning_rate"]
+            min_language_learning_rate = config["min_language_learning_rate"]
             train_language = config["train_language"]
             for epoch in range(1, num_epochs+1):
                 if epoch % config["refresh_mem_buffs_every"] == 0:
@@ -1173,7 +1182,8 @@ class meta_model(object):
                         if train_language: 
                             intified_task = self.intified_tasks[str_task]
                             self.base_language_train_step(
-                                intified_task, memory_buffer, learning_rate)
+                                intified_task, memory_buffer, 
+                                language_learning_rate)
 
                 if epoch % save_every == 0:
                     s_epoch  = "%i, " % epoch
@@ -1202,11 +1212,15 @@ class meta_model(object):
                         print("Early stop!")
                         break
 
-                if epoch % lr_decays_every == 0 and epoch > 0 and learning_rate > min_learning_rate:
-                    learning_rate *= lr_decay
+                if epoch % lr_decays_every == 0 and epoch > 0
+                    if learning_rate > min_learning_rate:
+                        learning_rate *= lr_decay
 
-                if epoch % lr_decays_every == 0 and epoch > 0 and meta_learning_rate > min_meta_learning_rate:
-                    meta_learning_rate *= meta_lr_decay
+                    if meta_learning_rate > min_meta_learning_rate:
+                        meta_learning_rate *= meta_lr_decay
+
+                    if language_learning_rate > min_language_learning_rate:
+                        language_learning_rate *= language_lr_decay
 
             if config["sweep_meta_batch_sizes"] is not None:
                 with open(sweep_filename, "a") as fout_sweep:
