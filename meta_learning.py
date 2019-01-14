@@ -37,7 +37,7 @@ config = {
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
-    "init_language_learning_rate": 1e-2,
+    "init_language_learning_rate": 1e-3,
     "init_meta_learning_rate": 1e-4,
 
     "new_init_learning_rate": 1e-6,
@@ -45,7 +45,7 @@ config = {
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
-    "language_lr_decay": 0.75,
+    "language_lr_decay": 0.7,
     "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/language_1e-2_0.75/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/language_1e-3_0.7/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -1154,6 +1154,7 @@ class meta_model(object):
             lr_decays_every = config["lr_decays_every"]
             lr_decay = config["lr_decay"]
             meta_lr_decay = config["meta_lr_decay"]
+            language_lr_decay = config["language_lr_decay"]
             min_learning_rate = config["min_learning_rate"]
             min_meta_learning_rate = config["min_meta_learning_rate"]
             min_language_learning_rate = config["min_language_learning_rate"]
@@ -1204,10 +1205,16 @@ class meta_model(object):
                             base_lang_rewards))
                         fout_lang.write(curr_lang_losses)
                         fout_lang_reward.write(curr_lang_rewards)
-                    print(curr_losses, curr_lang_losses)
-                    if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
-                        print("Early stop!")
-                        break
+			print(curr_losses, curr_lang_losses)
+                        if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
+                            print("Early stop!")
+                            break
+	            else:
+			print(curr_losses)
+                        if np.all(curr_losses < early_stopping_thresh):
+                            print("Early stop!")
+                            break
+
 
                 if epoch % lr_decays_every == 0 and epoch > 0:
                     if learning_rate > min_learning_rate:
@@ -1216,7 +1223,7 @@ class meta_model(object):
                     if meta_learning_rate > min_meta_learning_rate:
                         meta_learning_rate *= meta_lr_decay
 
-                    if language_learning_rate > min_language_learning_rate:
+                    if train_language and language_learning_rate > min_language_learning_rate:
                         language_learning_rate *= language_lr_decay
 
             if config["sweep_meta_batch_sizes"] is not None:
