@@ -37,7 +37,7 @@ config = {
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
-    "init_language_learning_rate": 1e-3,
+    "init_language_learning_rate": 1e-4,
     "init_meta_learning_rate": 1e-4,
 
     "new_init_learning_rate": 1e-6,
@@ -45,7 +45,7 @@ config = {
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
-    "language_lr_decay": 0.7,
+    "language_lr_decay": 0.85,
     "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/language_1e-3_0.7/",
+    "output_dir": "./temp_results/", #"/mnt/fs2/lampinen/meta_RL/language_1e-3_0.7/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -89,6 +89,9 @@ config = {
     
     "train_language": True, # whether to train language as well (only language
                             # inputs and only base tasks, for now)
+    "language_compositional": True, # whether language should be used
+                                    # compositionally, which is nice but 
+                                    # increases sentence length
 
     "internal_nonlinearity": tf.nn.leaky_relu,
     "output_nonlinearity": None
@@ -113,25 +116,46 @@ def _stringify_game(t):
     return "game_%s_l_%i_bv_%i_sr_%i" % (t["game"], t["losers"],
                                          t["black_valuable"], t["suits_rule"])
 
-def _wordify_task(t):
-    """For input to NLP module"""
-    if type(t) == str:
-        words = ["meta"] + t.split("_", 1)
-    else: # base tasks are dict
-        words = ["base", t["game"]] 
-        if t["losers"]:
-            words.append("losers")
-        else:
-            words.extend(["not", "losers"])
-        if t["black_valuable"]:
-            words.append("black_valuable")
-        else:
-            words.extend(["not", "black_valuable"])
-        if t["suits_rule"]:
-            words.append("suits_rule")
-        else:
-            words.extend(["not", "suits_rule"])
-    return words 
+if config["language_compositional"]:
+    def _wordify_task(t):
+        """For input to NLP module"""
+        if type(t) == str:
+            words = ["meta"] + t.split("_", 1)
+        else: # base tasks are dict
+            words = ["base", t["game"]] 
+            if t["losers"]:
+                words.append("losers")
+            else:
+                words.extend(["not", "losers"])
+            if t["black_valuable"]:
+                words.append("black_valuable")
+            else:
+                words.extend(["not", "black_valuable"])
+            if t["suits_rule"]:
+                words.append("suits_rule")
+            else:
+                words.extend(["not", "suits_rule"])
+        return words 
+else:
+    def _wordify_task(t):
+        """For input to NLP module"""
+        if type(t) == str:
+            words = t.split("_", 1)
+        else: # base tasks are dict
+            words = [t["game"]] 
+            if t["losers"]:
+                words.append("losers")
+            else:
+                words.append("not_losers")
+            if t["black_valuable"]:
+                words.append("black_valuable")
+            else:
+                words.append("not_black_valuable")
+            if t["suits_rule"]:
+                words.append("suits_rule")
+            else:
+                words.append("not_suits_rule")
+        return words 
 
 
 def _save_config(filename, config):
@@ -526,7 +550,7 @@ class meta_model(object):
                                            self.meta_input_ph)
 
         self.base_raw_output_language = _task_network(self.language_task_params,
-                                                 processed_input)
+                                                      processed_input)
         self.base_output_language = _output_mapping(self.base_raw_output_language)
         self.base_output_softmax_language = tf.nn.softmax(
             config["softmax_beta"] * self.base_output_language)
@@ -747,7 +771,10 @@ class meta_model(object):
             self.keep_prob_ph: self.tkp,
             self.lr_ph: lr
         }
+#        print("Language train pre/post")
+#        print(self.get_language_embedding(intified_task))
         self.sess.run(self.base_language_train, feed_dict=feed_dict)
+#        print(self.get_language_embedding(intified_task))
 
 
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
@@ -1199,6 +1226,9 @@ class meta_model(object):
                     fout_reward.write(curr_rewards)
                     fout_meta.write(curr_meta_true)
                     if train_language:
+                        (_, base_lang_losses, 
+                         base_lang_rewards) = self.run_base_language_eval(
+                            include_new=include_new)
                         curr_lang_losses = s_epoch + (lang_loss_format % tuple(
                             base_lang_losses))
                         curr_lang_rewards = s_epoch + (lang_reward_format % tuple(
