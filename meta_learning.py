@@ -15,7 +15,7 @@ pi = np.pi
 ### Parameters #################################################
 config = {
     "run_offset": 0,
-    "num_runs": 5,
+    "num_runs": 3,
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
     "suits_rule": [True, False],
@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "./temp_results/", #"/mnt/fs2/lampinen/meta_RL/language_1e-3_0.7/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -82,8 +82,14 @@ config = {
     "early_stopping_thresh": 0.05,
 #    "new_tasks": "random",
     "new_tasks": [{"game": "straight_flush", "losers": True,
-                  "black_valuable": False, "suits_rule": False}], # will be removed
-                                                                  # from base tasks
+                  "black_valuable": False, "suits_rule": False},
+                  {"game": "straight_flush", "losers": True,
+                  "black_valuable": False, "suits_rule": True},
+                  {"game": "straight_flush", "losers": True,
+                  "black_valuable": True, "suits_rule": False},
+                  {"game": "straight_flush", "losers": True,
+                  "black_valuable": True, "suits_rule": True}], # will be removed
+                                                                # from base tasks
 
     "new_meta_tasks": [],
     
