@@ -45,7 +45,7 @@ config = {
     "new_init_meta_learning_rate": 1e-6,
 
     "lr_decay": 0.85,
-    "language_lr_decay": 0.85,
+    "language_lr_decay": 0.8,
     "meta_lr_decay": 0.9,
 
     "lr_decays_every": 100,
@@ -56,8 +56,8 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 60000,
-    "max_new_epochs": 1000,
+    "max_base_epochs": 1,# 60000,
+    "max_new_epochs": 1,#1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
     "train_drop_prob": 0.00, # dropout probability, applied on meta and hyper
@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
+    "output_dir": "temp_results/",# "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -98,6 +98,8 @@ config = {
     "language_compositional": True, # whether language should be used
                                     # compositionally, which is nice but 
                                     # increases sentence length
+    "lang_drop_prob": 0.5, # dropout on language processing features
+                           # to try to address overfitting
 
     "internal_nonlinearity": tf.nn.leaky_relu,
     "output_nonlinearity": None
@@ -427,6 +429,9 @@ class meta_model(object):
 
         # language processing: lang -> emb
         # TODO: only create these if training language, for memory efficiency 
+
+        self.lang_keep_ph = lang_keep_ph = tf.placeholder(tf.float32)
+        self.lang_keep_prob = 1. - config["lang_drop_prob"] 
         self.language_input_ph = tf.placeholder(
             tf.int32, shape=[1, self.max_sentence_len])
         with tf.variable_scope("word_embeddings", reuse=False):
@@ -442,11 +447,19 @@ class meta_model(object):
                 state = cell.zero_state(1, dtype=tf.float32)
 
                 for i in range(self.max_sentence_len):
-                    cell_output, state = cell(embedded_language[:, i, :], state)
+                    this_input = embedded_language[:, i, :]
+                    this_input = tf.nn.dropout(this_input,
+                                               lang_keep_ph)
+                    cell_output, state = cell(this_input, state)
 
+                cell_output = tf.nn.dropout(cell_output,
+                                           lang_keep_ph)
                 language_hidden = slim.fully_connected(
                     cell_output, num_hidden_hyper,
                     activation_fn=internal_nonlinearity)
+
+                language_hidden = tf.nn.dropout(language_hidden,
+                                           lang_keep_ph)
 
                 func_embeddings = slim.fully_connected(language_hidden, 
                                                        num_hidden_hyper,
@@ -771,6 +784,7 @@ class meta_model(object):
         feed_dict = {
             self.base_input_ph: input_buff,
             self.language_input_ph: intified_task,
+            self.lang_keep_ph: self.lang_keep_prob, 
             self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
             self.base_target_mask_ph: target_mask,
@@ -863,6 +877,7 @@ class meta_model(object):
         targets, target_mask = self._outcomes_to_targets(output_buff)
         feed_dict = {
             self.keep_prob_ph: 1.,
+            self.lang_keep_ph: 1., 
             self.language_input_ph: intified_task,
             self.base_input_ph: input_buff,
             self.base_target_ph: targets,
@@ -943,6 +958,7 @@ class meta_model(object):
     def get_language_embedding(self, intified_task):
         feed_dict = {
             self.keep_prob_ph: 1.,
+            self.lang_keep_ph: 1.,
             self.language_input_ph: intified_task
         }
         res = self.sess.run(self.language_function_emb, feed_dict=feed_dict)
