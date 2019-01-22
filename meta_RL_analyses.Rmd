@@ -11,8 +11,9 @@ library(tidyverse)
 num_runs = 10
 results_dir = "results/paper_results/"
 
-result_subdirs = c("nometa", "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
-                   "basic", "basic_su_heldout", "basic_random_holdout_longer", "basic_only_one", "basic_only_one_ho")
+result_subdirs = c("nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
+                   "basic", #"basic_su_heldout", "basic_random_holdout_longer", "basic_only_one", "basic_only_one_ho",
+                   "language")
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -199,7 +200,7 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
 ```
 
 ```{r}
-ggplot(avg_sweep_d %>% filter(run_type %in% c("basic_only_one_ho", "nometa_only_one_ho")), aes(x=size, color=run_type, y=avg_reward)) +
+ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=run_type, y=avg_reward)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
@@ -208,10 +209,50 @@ ggplot(avg_sweep_d %>% filter(run_type %in% c("basic_only_one_ho", "nometa_only_
   facet_grid(game_type ~ is_new_game)
 ```
 
+# language results
+
+```{r}
+language_d = load_d(results_dir, result_subdirs, num_runs, "new_language_rewards")
+
+language_d = language_d %>%
+  mutate(is_su_ho=grepl("su_heldout", run_type),
+         is_only_one=grepl("only_one$", run_type),
+         is_only_one_ho=grepl("only_one_ho", run_type),
+         is_random_ho=grepl("random", run_type),
+         is_default=!(is_su_ho | is_random_ho | is_only_one | is_only_one_ho)) %>%
+  gather(game_str, reward, starts_with("game")) %>%
+  mutate(game_type = str_extract(game_str, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+         losers = grepl("l_1", game_str),
+         black_valuable = grepl("bv_1", game_str),
+         suits_rule = grepl("sr_1", game_str),
+         is_new_game = (is_default & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) | (is_only_one & game_str %in% new_game_strs_only_one) | (is_only_one_ho & game_str %in% new_game_strs_only_one_ho))
+```
+
+```{r}
+avg_language_d = language_d %>%
+  select(-game_str) %>%
+  filter(epoch == 0) %>%
+  group_by(run_type, game_type, is_new_game) %>%
+  summarize(avg_reward = mean(reward), sd_reward=sd(reward),
+            se_reward = sd_reward/sqrt(n()), 
+            ci_lo = avg_reward - 1.96*se_reward, 
+            ci_hi = avg_reward + 1.96*se_reward)
+```
+
+```{r}
+summary_plot(language_d %>%
+               filter(epoch == 0),
+             "game_type", "reward", "is_new_game",
+             simple_baselines) +
+  facet_wrap(. ~ run_type)
+```
+
 # meta mapping (true) evaluation
 
 ```{r}
-meta_d = load_d(results_dir, c("basic", "basic_su_heldout", "basic_random_holdout_longer", "basic_only_one", "basic_only_one_ho"), num_runs, "new_meta_true_losses")
+meta_d = load_d(results_dir, c("basic", 
+                               #"basic_su_heldout", "basic_random_holdout_longer", "basic_only_one", "basic_only_one_ho",
+                               "language"), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
   filter(epoch == 0) %>%
