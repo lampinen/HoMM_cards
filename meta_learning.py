@@ -56,8 +56,8 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 1,# 60000,
-    "max_new_epochs": 1,#1000,
+    "max_base_epochs": 60000,
+    "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
     "train_drop_prob": 0.00, # dropout probability, applied on meta and hyper
@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "temp_results/",# "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -616,6 +616,9 @@ class meta_model(object):
             self.total_base_language_loss)
         self.meta_t_train = optimizer.minimize(self.total_meta_t_loss)
         self.meta_m_train = optimizer.minimize(self.total_meta_m_loss)
+
+        # Saver
+        self.saver = tf.train.Saver()
 
         # initialize
         sess_config = tf.ConfigProto()
@@ -1361,6 +1364,9 @@ class meta_model(object):
                     fout.write(
                         '"' + hand.__repr__() + '", %f, %f, %f\n' % tuple(act_probs[turn, :]))
 
+
+    def save_parameters(self, filename):
+        self.saver.save(self.sess, filename)
                 
 
 ## running stuff
@@ -1381,6 +1387,7 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
     model.run_training(filename_prefix=filename_prefix,
                        num_epochs=config["max_base_epochs"],
                        include_new=False)
+    model.save_parameters(filename_prefix + "_guess_checkpoint")
     model.save_embeddings(filename=filename_prefix + "_guess_embeddings.csv",
                           include_new=True)
     model.save_embeddings(filename=filename_prefix + "_guess_language_embeddings.csv",
@@ -1397,6 +1404,7 @@ for run_i in range(config["run_offset"], config["run_offset"]+config["num_runs"]
     model.run_training(filename_prefix=filename_prefix + "_new",
                        num_epochs=config["max_new_epochs"],
                        include_new=True)
+    model.save_parameters(filename_prefix + "_final_checkpoint")
 
     model.save_embeddings(filename=filename_prefix + "_final_embeddings.csv",
                           include_new=True)
