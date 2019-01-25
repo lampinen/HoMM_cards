@@ -15,7 +15,7 @@ pi = np.pi
 ### Parameters #################################################
 config = {
     "run_offset": 0,
-    "num_runs": 3,
+    "num_runs": 5,
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
     "suits_rule": [True, False],
@@ -40,9 +40,9 @@ config = {
     "init_language_learning_rate": 1e-4,
     "init_meta_learning_rate": 1e-4,
 
-    "new_init_learning_rate": 1e-6,
-    "new_init_language_learning_rate": 1e-6,
-    "new_init_meta_learning_rate": 1e-6,
+    "new_init_learning_rate": 1e-5,
+    "new_init_language_learning_rate": 1e-5,
+    "new_init_meta_learning_rate": 1e-5,
 
     "lr_decay": 0.85,
     "language_lr_decay": 0.8,
@@ -56,7 +56,7 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 60000,
+    "max_base_epochs": 5000,
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
@@ -70,7 +70,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/fast_lang_results/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -1192,14 +1192,16 @@ class meta_model(object):
                         swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
                         fout_sweep.write(swept_rewards)
 
-            learning_rate = config["init_learning_rate"]
-            meta_learning_rate = config["init_meta_learning_rate"]
-            language_learning_rate = config["init_language_learning_rate"]
-
             if include_new:
                 tasks = self.all_tasks
+                learning_rate = config["new_init_learning_rate"]
+                meta_learning_rate = config["new_init_meta_learning_rate"]
+                language_learning_rate = config["new_init_language_learning_rate"]
             else:
                 tasks = self.all_initial_tasks
+                learning_rate = config["init_learning_rate"]
+                meta_learning_rate = config["init_meta_learning_rate"]
+                language_learning_rate = config["init_language_learning_rate"]
 
             save_every = config["save_every"]
             early_stopping_thresh = config["early_stopping_thresh"]
