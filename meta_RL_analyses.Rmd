@@ -140,6 +140,15 @@ summary_plot(reward_d %>%
   facet_wrap(. ~ run_type)
 ```
 
+```{r}
+summary_plot(reward_d %>%
+               filter(epoch == 0,
+                      run_type == "basic"),
+             "game_type", "reward", "is_new_game",
+             simple_baselines) 
+ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic.png", width=5, height=3)
+```
+
 
 ```{r}
 ggplot(avg_reward_d, aes(x=game_type, fill=is_new_game, y=avg_reward)) +
@@ -197,6 +206,19 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
   scale_color_brewer(palette="Set2") +
   xlab("Meta Set Size") +
   facet_grid(game_type ~ run_type)
+```
+
+```{r}
+ggplot(avg_sweep_d %>%
+         filter(run_type == "basic"), aes(x=size, color=is_new_game, y=avg_reward)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
+  scale_color_brewer(palette="Set2") +
+  xlab("Meta Set Size") +
+  facet_wrap(~ game_type)
+
+ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_sweeping.png", width=5, height=3)
 ```
 
 ```{r}
