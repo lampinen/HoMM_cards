@@ -8,13 +8,19 @@ library(tidyverse)
 ```
 
 ```{r}
-num_runs = 5
+num_runs = 10
 results_dir = "results/paper_results/"
 
 result_subdirs = c("nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
                    "basic", #"basic_su_heldout", 
                    "basic_random_holdout_longer", # "basic_only_one", "basic_only_one_ho",
                    "language", "language_drop_03", "language_drop_05", "language_noncompositional")
+
+name_run_type = function(run_type) { # names for plotting
+  case_when(run_type == "basic" ~ "Targeted 10% holdout",
+            run_type == "basic_random_holdout_longer" ~ "Random 50% holdout",
+            T ~ run_type)
+}
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -156,7 +162,7 @@ summary_plot(reward_d %>%
                       run_type %in% c("basic", "basic_random_holdout_longer")),
              "game_type", "reward", "is_new_game",
              simple_baselines) +
-  facet_wrap(. ~ run_type)
+  facet_wrap(. ~ named_run_type)
 ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_random_holdout_half.png", width=5, height=3)
 ```
 
