@@ -34,7 +34,7 @@ config = {
 
     "num_hidden": 64,
     "num_hidden_hyper": 512,
-    "num_hidden_language": 128,
+    "num_hidden_language": 512,
 
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_smaller/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_meta/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -99,8 +99,8 @@ config = {
     "language_compositional": True, # whether language should be used
                                     # compositionally, which is nice but 
                                     # increases sentence length
-    "lang_drop_prob": 0.5, # dropout on language processing features
-                           # to try to address overfitting
+    "lang_drop_prob": 0.0, # dropout on language processing features
+                            # to try to address overfitting
 
     "internal_nonlinearity": tf.nn.leaky_relu,
     "output_nonlinearity": None
@@ -576,7 +576,12 @@ class meta_model(object):
         self.base_output_softmax_language = tf.nn.softmax(
             config["softmax_beta"] * self.base_output_language)
 
-        # TODO: language for meta tasks & mappings 
+        self.meta_t_raw_output_language = _task_network(self.language_task_params,
+                                                        self.meta_input_ph)
+        self.meta_t_output_language = tf.nn.sigmoid(self.meta_t_raw_output_language)
+
+        self.meta_m_output_language = _task_network(self.language_task_params,
+                                                    self.meta_input_ph)
 
         # have to mask base output because can only learn about the action 
         # actually taken
@@ -610,6 +615,13 @@ class meta_model(object):
             tf.square(self.meta_m_output - self.meta_target_ph), axis=1)
         self.total_meta_m_loss = tf.reduce_mean(self.meta_m_loss)
 
+        self.meta_t_language_loss = tf.reduce_sum(
+            tf.square(self.meta_t_output_language - processed_class), axis=1)
+        self.total_meta_t_language_loss = tf.reduce_mean(self.meta_t_language_loss)
+
+        self.meta_m_language_loss = tf.reduce_sum(
+            tf.square(self.meta_m_output_language - self.meta_target_ph), axis=1)
+        self.total_meta_m_language_loss = tf.reduce_mean(self.meta_m_language_loss)
 
         optimizer = tf.train.RMSPropOptimizer(self.lr_ph)
 
@@ -618,6 +630,9 @@ class meta_model(object):
             self.total_base_language_loss)
         self.meta_t_train = optimizer.minimize(self.total_meta_t_loss)
         self.meta_m_train = optimizer.minimize(self.total_meta_m_loss)
+
+        self.meta_t_language_train = optimizer.minimize(self.total_meta_t_language_loss)
+        self.meta_m_language_train = optimizer.minimize(self.total_meta_m_language_loss)
 
         # Saver
         self.saver = tf.train.Saver()
@@ -1000,6 +1015,41 @@ class meta_model(object):
             self.meta_dataset_cache[t] = self.get_meta_dataset(t, include_new)
 
 
+    def meta_language_loss_eval(self, intified_task, meta_dataset):
+        feed_dict = {
+            self.keep_prob_ph: 1.,
+            self.lang_keep_ph: 1, 
+            self.meta_input_ph: meta_dataset["x"],
+            self.language_input_ph: intified_task
+        }
+        y_data = meta_dataset["y"]
+        if y_data.shape[-1] == 1:
+            feed_dict[self.meta_class_ph] = y_data 
+            fetch = self.total_meta_t_language_loss
+        else:
+            feed_dict[self.meta_target_ph] = y_data 
+            fetch = self.total_meta_m_language_loss
+
+        return self.sess.run(fetch, feed_dict=feed_dict)
+        
+
+    def run_meta_language_loss_eval(self, include_new=False):
+        meta_tasks = self.all_base_meta_tasks 
+        if include_new:
+            meta_tasks += self.new_meta_tasks 
+
+        names = []
+        losses = []
+        for t in meta_tasks:
+            meta_dataset = self.meta_dataset_cache[t]
+            intified_task = self.intified_tasks[t]
+            loss = self.meta_language_loss_eval(intified_task, meta_dataset)
+            names.append(t)
+            losses.append(loss)
+
+        return names, losses
+
+
     def meta_loss_eval(self, meta_dataset):
         feed_dict = {
             self.keep_prob_ph: 1.,
@@ -1081,10 +1131,82 @@ class meta_model(object):
             this_fetch = self.meta_m_output 
 
         res = self.sess.run(this_fetch, feed_dict=feed_dict)
-        return res[len(meta_dataset["x"]):, :]
+
+        if new_dataset is not None:
+            return res[len(meta_dataset["x"]):, :]
+        else:
+            return res
+
+    
+    def get_meta_language_outputs(self, intified_task, meta_dataset, new_dataset=None):
+        """Get new dataset mapped according to meta-mapping specified by
+        language"""
+        meta_class = meta_dataset["y"].shape[-1] == 1
+
+        if new_dataset is not None:
+            this_x = np.concatenate([meta_dataset["x"], new_dataset["x"]], axis=0)
+            if meta_class:
+                this_y = np.concatenate([meta_dataset["y"], np.zeros([len(new_dataset["x"])])], axis=0)
+            else:
+                this_y = np.concatenate([meta_dataset["y"], np.zeros_like(new_dataset["x"])], axis=0)
+            this_mask = np.zeros(len(this_x), dtype=np.bool)
+            this_mask[:len(meta_dataset["x"])] = True # use only these to guess
+        else:
+            this_x = meta_dataset["x"]
+            this_y = meta_dataset["y"]
+            this_mask = np.ones(len(this_x), dtype=np.bool)
+
+        feed_dict = {
+            self.keep_prob_ph: 1.,
+            self.lang_keep_ph: 1,
+            self.meta_input_ph: this_x,
+            self.language_input_ph: intified_task
+        }
+        if meta_class:
+            feed_dict[self.meta_class_ph] = this_y 
+            this_fetch = self.meta_t_language_output 
+        else:
+            feed_dict[self.meta_target_ph] = this_y
+            this_fetch = self.meta_m_language_output 
+
+        res = self.sess.run(this_fetch, feed_dict=feed_dict)
+
+        if new_dataset is not None:
+            return res[len(meta_dataset["x"]):, :]
+        else:
+            return res
 
 
     def run_meta_true_eval(self, include_new=False):
+        """Evaluates true meta loss, i.e. the accuracy of the model produced
+           by the embedding output by the meta task"""
+        meta_tasks = self.base_meta_mappings 
+        meta_pairings = self.meta_pairings_base
+        if include_new:
+            meta_pairings = self.meta_pairings_full
+
+        names = []
+        rewards = []
+        for meta_task in meta_tasks:
+            meta_dataset = self.meta_dataset_cache[meta_task]
+            for task, other in meta_pairings[meta_task]["base"]:
+                task_buffer = self.memory_buffers[task]
+                task_embedding = self.get_base_embedding(task_buffer)
+
+                other_buffer = self.memory_buffers[other]
+                other_game = self.games[other]
+
+                mapped_embedding = self.get_meta_outputs(
+                    meta_dataset, {"x": task_embedding})
+
+                names.append(meta_task + ":" + task + "->" + other)
+                _, this_rewards = self.base_embedding_eval(mapped_embedding, other_game, other_buffer)
+                rewards.append(this_rewards)
+
+        return names, rewards
+
+
+    def run_meta_language_true_eval(self, include_new=False):
         """Evaluates true meta loss, i.e. the accuracy of the model produced
            by the embedding output by the meta task"""
         meta_tasks = self.base_meta_mappings 
@@ -1131,6 +1253,25 @@ class meta_model(object):
         self.sess.run(op, feed_dict=feed_dict)
 
 
+    def meta_language_train_step(self, intified_task, meta_dataset, meta_lr):
+        feed_dict = {
+            self.keep_prob_ph: self.tkp,
+            self.lang_keep_ph: self.lang_keep_prob, 
+            self.meta_input_ph: meta_dataset["x"], 
+            self.language_input_ph: intified_task,
+            self.lr_ph: meta_lr
+        }
+        y_data = meta_dataset["y"]
+        if y_data.shape[-1] == 1:
+            feed_dict[self.meta_class_ph] = y_data 
+            op = self.meta_t_language_train
+        else:
+            feed_dict[self.meta_target_ph] = y_data 
+            op = self.meta_m_language_train
+
+        self.sess.run(op, feed_dict=feed_dict)
+
+
     def run_training(self, filename_prefix, num_epochs, include_new=False):
         """Train model on base and meta tasks, if include_new include also
         the new ones."""
@@ -1141,7 +1282,8 @@ class meta_model(object):
         meta_filename = filename_prefix + "_meta_true_losses.csv"
         lang_filename = filename_prefix + "_language_losses.csv"
         lang_reward_filename = filename_prefix + "_language_rewards.csv"
-        with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta, open(lang_filename, "w") as fout_lang, open(lang_reward_filename, "w") as fout_lang_reward:
+        lang_meta_filename = filename_prefix + "_language_meta_true_losses.csv"
+        with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta, open(lang_filename, "w") as fout_lang, open(lang_reward_filename, "w") as fout_lang_reward, open(lang_meta_filename, "w") as fout_lang_meta:
             base_names, base_losses, base_rewards = self.run_base_eval(
                 include_new=include_new)
             meta_names, meta_losses = self.run_meta_loss_eval(
@@ -1162,10 +1304,18 @@ class meta_model(object):
                 (base_lang_names, base_lang_losses, 
                  base_lang_rewards) = self.run_base_language_eval(
                     include_new=include_new)
-                fout_lang.write("epoch, " + ", ".join(base_lang_names) + "\n")
+                (meta_lang_names, 
+                 meta_lang_losses) = self.run_meta_language_loss_eval(
+                    include_new=include_new)
+                (meta_lang_true_names,
+                 meta_lang_true_losses) = self.run_meta_language_true_eval(
+                    include_new=include_new)
+                fout_lang.write("epoch, " + ", ".join(base_lang_names + meta_lang_names) + "\n")
                 fout_lang_reward.write("epoch, " + ", ".join(base_lang_names) + "\n")
-                lang_loss_format = ", ".join(["%f" for _ in base_lang_names]) + "\n"
+                fout_lang_meta.write("epoch, " + ", ".join(meta_lang_true_names) + "\n")
+                lang_loss_format = ", ".join(["%f" for _ in base_lang_names + meta_lang_names]) + "\n"
                 lang_reward_format = ", ".join(["%f" for _ in base_lang_names]) + "\n"
+                lang_meta_true_format = ", ".join(["%f" for _ in meta_lang_true_names]) + "\n"
 
             s_epoch  = "0, "
             curr_losses = s_epoch + (loss_format % tuple(
@@ -1179,11 +1329,14 @@ class meta_model(object):
 
             if train_language:
                 curr_lang_losses = s_epoch + (lang_loss_format % tuple(
-                    base_lang_losses))
+                    base_lang_losses + meta_lang_losses))
                 curr_lang_rewards = s_epoch + (lang_reward_format % tuple(
                     base_lang_rewards))
+                curr_meta_lang_true = s_epoch + (lang_meta_true_format % tuple(
+                    meta_lang_true_losses))
                 fout_lang.write(curr_lang_losses)
                 fout_lang_reward.write(curr_lang_rewards)
+                fout_meta.write(curr_meta_lang_true)
 
             if config["sweep_meta_batch_sizes"] is not None:
                 with open(sweep_filename, "w") as fout_sweep:
@@ -1229,6 +1382,11 @@ class meta_model(object):
                     if task in meta_names:
                         dataset = self.meta_dataset_cache[task]
                         self.meta_train_step(dataset, meta_learning_rate)
+                        if train_language: 
+                            intified_task = self.intified_tasks[task]
+                            self.meta_language_train_step(
+                                intified_task, dataset, 
+                                meta_learning_rate)
                     else:
                         str_task = _stringify_game(task)
                         memory_buffer = self.memory_buffers[str_task]
@@ -1258,10 +1416,19 @@ class meta_model(object):
                         (_, base_lang_losses, 
                          base_lang_rewards) = self.run_base_language_eval(
                             include_new=include_new)
+                        _, meta_lang_losses = self.run_meta_language_loss_eval(
+                            include_new=include_new)
+                        _, meta_lang_true_losses = self.run_meta_language_true_eval(
+                            include_new=include_new)
                         curr_lang_losses = s_epoch + (lang_loss_format % tuple(
-                            base_lang_losses))
+                            base_lang_losses + meta_lang_losses))
                         curr_lang_rewards = s_epoch + (lang_reward_format % tuple(
                             base_lang_rewards))
+                        curr_meta_lang_true = s_epoch + (lang_meta_true_format % tuple(
+                            meta_lang_true_losses))
+                        fout_lang.write(curr_lang_losses)
+                        fout_lang_reward.write(curr_lang_rewards)
+                        fout_meta.write(curr_meta_lang_true)
                         fout_lang.write(curr_lang_losses)
                         fout_lang_reward.write(curr_lang_rewards)
 			print(curr_losses, curr_lang_losses)
