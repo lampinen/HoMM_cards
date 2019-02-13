@@ -1330,7 +1330,7 @@ class meta_model(object):
                     meta_lang_true_losses))
                 fout_lang.write(curr_lang_losses)
                 fout_lang_reward.write(curr_lang_rewards)
-                fout_meta.write(curr_meta_lang_true)
+                fout_lang_meta.write(curr_meta_lang_true)
 
             if config["sweep_meta_batch_sizes"] is not None:
                 with open(sweep_filename, "w") as fout_sweep:
@@ -1422,9 +1422,7 @@ class meta_model(object):
                             meta_lang_true_losses))
                         fout_lang.write(curr_lang_losses)
                         fout_lang_reward.write(curr_lang_rewards)
-                        fout_meta.write(curr_meta_lang_true)
-                        fout_lang.write(curr_lang_losses)
-                        fout_lang_reward.write(curr_lang_rewards)
+                        fout_lang_meta.write(curr_meta_lang_true)
 			print(curr_losses, curr_lang_losses)
                         if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
                             print("Early stop!")
