@@ -8,13 +8,19 @@ library(tidyverse)
 ```
 
 ```{r}
-num_runs = 5
+num_runs = 10
 results_dir = "results/paper_results/"
 
 result_subdirs = c("nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
                    "basic", #"basic_su_heldout", 
                    "basic_random_holdout_longer", # "basic_only_one", "basic_only_one_ho",
                    "language", "language_drop_03", "language_drop_05", "language_noncompositional")
+
+name_run_type = function(run_type) { # names for plotting
+  case_when(run_type == "basic" ~ "Targeted 10% holdout",
+            run_type == "basic_random_holdout_longer" ~ "Random 50% holdout",
+            T ~ run_type)
+}
 
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
@@ -55,6 +61,8 @@ load_d = function(results_dir, result_subdirs, num_runs, file_type) {
       d = bind_rows(d, this_d)
       }
   }
+  d = d %>%
+    mutate(named_run_type = name_run_type(run_type))
   return(d)
 }
 ```
@@ -138,7 +146,7 @@ summary_plot(reward_d %>%
                filter(epoch == 0),
              "game_type", "reward", "is_new_game",
              simple_baselines) +
-  facet_wrap(. ~ run_type)
+  facet_wrap(. ~ named_run_type)
 ```
 
 ```{r}
@@ -156,17 +164,10 @@ summary_plot(reward_d %>%
                       run_type %in% c("basic", "basic_random_holdout_longer")),
              "game_type", "reward", "is_new_game",
              simple_baselines) +
-  facet_wrap(. ~ run_type)
+  facet_wrap(. ~ named_run_type)
 ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_random_holdout_half.png", width=5, height=3)
 ```
 
-```{r}
-ggplot(avg_reward_d, aes(x=game_type, fill=is_new_game, y=avg_reward)) +
-  geom_bar(stat="identity", position="dodge") +
-  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
-  scale_fill_brewer(palette="Set2") +
-  facet_wrap(. ~ run_type)
-```
 ```{r}
 avg_reward_d %>% filter(is_new_game)
 ```
@@ -201,7 +202,7 @@ sweep_d = sweep_d %>%
 avg_sweep_d = sweep_d %>%
   select(-game_str) %>%
   filter(epoch == 0) %>%
-  group_by(run_type, size, game_type, is_new_game) %>%
+  group_by(run_type, named_run_type, size, game_type, is_new_game) %>%
   summarize(avg_reward = mean(reward), sd_reward=sd(reward),
             se_reward = sd_reward/sqrt(n()), 
             ci_lo = avg_reward - 1.96*se_reward, 
@@ -215,7 +216,7 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
   scale_color_brewer(palette="Set2") +
   xlab("Meta Set Size") +
-  facet_grid(game_type ~ run_type)
+  facet_grid(game_type ~ named_run_type)
 ```
 
 ```{r}
@@ -232,7 +233,7 @@ ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_sweeping.png", wid
 ```
 
 ```{r}
-ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=run_type, y=avg_reward)) +
+ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=named_run_type, y=avg_reward)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
@@ -298,8 +299,8 @@ ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/crappy_language.png", wi
 ```{r}
 meta_d = load_d(results_dir, c("basic", 
                                #"basic_su_heldout",
-                               "basic_random_holdout_longer"# "basic_only_one", "basic_only_one_ho",
-                               #"language"
+                               "basic_random_holdout_longer",# "basic_only_one", "basic_only_one_ho",
+                               "language", "language_drop_03", "language_drop_05", "language_noncompositional"
                                ), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
@@ -309,16 +310,16 @@ meta_d = meta_d %>%
          is_only_one_ho=grepl("only_one_ho", run_type),
          is_random_ho=grepl("random", run_type),
          is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
-  gather(map_str, reward, -c(run, run_type, epoch), -starts_with("is_")) %>%
+  gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
   mutate(is_new = (is_default & (source %in% new_game_strs | target %in% new_game_strs)) | (is_random_ho & (source %in% new_game_strs_random_heldout | target %in% new_game_strs_random_heldout)) | (is_only_one & (source %in% new_game_strs_only_one | target %in% new_game_strs_only_one)) | (is_su_ho & (source %in% new_game_strs_su_heldout | target %in% new_game_strs_su_heldout))| (is_only_one_ho & (source %in% new_game_strs_only_one_ho | target %in% new_game_strs_only_one_ho)))
 ```
 
 ```{r}
 avg_meta_d = meta_d %>%
-  group_by(run_type, run, meta_task, is_new) %>%
+  group_by(run_type, named_run_type, run, meta_task, is_new) %>%
   summarize(avg_reward = mean(reward)) %>%
-  group_by(run_type, meta_task, is_new) %>%
+  group_by(run_type, named_run_type, meta_task, is_new) %>%
   summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward),
             se_reward = sd_avg_reward/sqrt(n()), 
             ci_lo = avg_avg_reward - 1.96*se_reward, 
@@ -331,7 +332,7 @@ ggplot(avg_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
   scale_fill_brewer(palette="Set2") +
-  facet_wrap(.~run_type)
+  facet_wrap(. ~ named_run_type)
 ```
 
 ```{r}
@@ -339,7 +340,7 @@ summary_plot(meta_d %>%
                filter(epoch == 0,
                       run_type %in% c("basic", "basic_random_holdout_longer")),
              "meta_task", "reward", "is_new") +
-  facet_wrap(. ~ run_type)
+  facet_wrap(. ~ named_run_type)
 
 ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_basic_random_meta.png", width=5, height=3)
 ```

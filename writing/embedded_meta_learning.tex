@@ -21,6 +21,9 @@
 \tikzstyle{relunode} = [rectangle, draw, very thick, inner sep=0pt, minimum size=0.5cm]
 \tikzstyle{line} = [draw, very thick, -latex']
 
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0em}
+
 \begin{document}
 
 \section{Introduction}
@@ -128,8 +131,8 @@ This system can be trained end-to-end if labels are provided for a second set of
 $$\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathcal{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]$$
 More generally, suppose we have some input which is already embedded in the representation space $z_{in} \in Z$, and an embedded dataset $D_Z$ of (embedding, target embedding) pairs $\{(z_{in,0}, z_{out,0})\}$. Then we can generate an output $\hat{z}_{out} \in Z$ as:  
 $$\hat{z}_{out} = f_{D_Z}(z_{in}) \qquad \text{where } f_{D_Z} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left(D_Z\right)\right)$$
-This output can then be appropriately dispatched depedning on the task at hand. For example, if the $z_{in,i}$ are the system's embeddings for trying to win various games, and the $z_{out,i}$ are the corresponding embeddings for trying to lose those games, then $z_{out}$ could be interpreted as the system's guess at a losing strategy for the game embedded as $z_{in}$, and then could be used to play that game. We could then evaluate performance by how well the system did at losing.
-
+This output can then be appropriately dispatched depending on the task at hand. For example, if the $z_{in,i}$ are the system's embeddings for trying to win various games, and the $z_{out,i}$ are the corresponding embeddings for trying to lose those games, then $z_{out}$ could be interpreted as the system's guess at a losing strategy for the game embedded as $z_{in}$, and then could be used to play that game. We could then evaluate performance by how well the system actually performs at losing with the $z_{out}$ strategy. \par
+Similarly, we could map from language to a task embedding, and then ask how well the system performs at the task specified by language. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows substantial flexibility within a unified system. 
 
 \section{Experiments}
 
@@ -155,6 +158,13 @@ These games are simplified analogs of various card games, including poker and bl
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. \par
 In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{} to predict rewards for each bet in each state. The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples. \par   
 We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. \par
+
+\subsubsection{Results}
+\textbf{Basic meta learning:} First, we show that the  \par
+\textbf{Meta mapping (task $\rightarrow$ task):} \par
+\textbf{Basic language (language $\rightarrow$ task):} \par
+\textbf{Meta language (language $\rightarrow (\text{task} \rightarrow \text{task})$):} \par
+
 
 \section{Discussion}
 
