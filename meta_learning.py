@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_meta/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_simplified/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -134,16 +134,10 @@ if config["language_compositional"]:
             words = ["base", t["game"]] 
             if t["losers"]:
                 words.append("losers")
-            else:
-                words.extend(["not", "losers"])
             if t["black_valuable"]:
                 words.append("black_valuable")
-            else:
-                words.extend(["not", "black_valuable"])
             if t["suits_rule"]:
                 words.append("suits_rule")
-            else:
-                words.extend(["not", "suits_rule"])
         return words 
 else:
     def _wordify_task(t):
