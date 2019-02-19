@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_simplified/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_meta_nontoggling/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -107,7 +107,7 @@ config = {
 }
 
 config["base_meta_tasks"] = ["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
-config["base_meta_mappings"] = ["toggle_" + o for o in config["option_names"]]
+config["base_meta_mappings"] = ["turnON_" + o for o in config["option_names"]] + ["turnOF_" + o for o in config["option_names"]]
 #config["base_meta_tasks"] = []#["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
 #config["base_meta_mappings"] = []#["toggle_" + o for o in config["option_names"]]
 config["base_tasks"] = [{"game": g, "losers": l, "black_valuable": b,
@@ -177,11 +177,12 @@ def _get_meta_pairings(base_tasks, meta_tasks, meta_mappings):
     all_meta_tasks = meta_tasks + meta_mappings
     meta_pairings = {mt: {"base": [], "meta": []} for mt in all_meta_tasks}
     for mt in all_meta_tasks:
-        if mt[:6] == "toggle":
+        if mt[:4] == "turn":
+            ON_or_OFF = mt[4:6] == "ON"
             to_toggle = mt[7:]
             for task in base_tasks: 
                 other = deepcopy(task) 
-                other[to_toggle] = not other[to_toggle]
+                other[to_toggle] = ON_or_OFF 
                 if other in base_tasks:
                     meta_pairings[mt]["base"].append((_stringify_game(task),
                                                       _stringify_game(other)))
