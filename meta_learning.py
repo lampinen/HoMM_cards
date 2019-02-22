@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_meta_nontoggling/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_nontoggling_random_holdout/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -81,16 +81,16 @@ config = {
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
-#    "new_tasks": "random",
-    "new_tasks": [{"game": "straight_flush", "losers": True,
-                  "black_valuable": False, "suits_rule": False},
-                  {"game": "straight_flush", "losers": True,
-                  "black_valuable": False, "suits_rule": True},
-                  {"game": "straight_flush", "losers": True,
-                  "black_valuable": True, "suits_rule": False},
-                  {"game": "straight_flush", "losers": True,
-                  "black_valuable": True, "suits_rule": True}], # will be removed
-                                                                # from base tasks
+    "new_tasks": "random",
+#    "new_tasks": [{"game": "straight_flush", "losers": True,
+#                  "black_valuable": False, "suits_rule": False},
+#                  {"game": "straight_flush", "losers": True,
+#                  "black_valuable": False, "suits_rule": True},
+#                  {"game": "straight_flush", "losers": True,
+#                  "black_valuable": True, "suits_rule": False},
+#                  {"game": "straight_flush", "losers": True,
+#                  "black_valuable": True, "suits_rule": True}], # will be removed
+#                                                                # from base tasks
 
     "new_meta_tasks": [],
     
@@ -1213,7 +1213,7 @@ class meta_model(object):
         rewards = []
         for meta_task in meta_tasks:
             meta_dataset = self.meta_dataset_cache[meta_task]
-            intified_task = self.intified_tasks[t]
+            intified_task = self.intified_tasks[meta_task]
             for task, other in meta_pairings[meta_task]["base"]:
                 task_buffer = self.memory_buffers[task]
                 task_embedding = self.get_base_embedding(task_buffer)
