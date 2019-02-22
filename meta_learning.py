@@ -1159,10 +1159,10 @@ class meta_model(object):
         }
         if meta_class:
             feed_dict[self.meta_class_ph] = this_y 
-            this_fetch = self.meta_t_language_output 
+            this_fetch = self.meta_t_output_language 
         else:
             feed_dict[self.meta_target_ph] = this_y
-            this_fetch = self.meta_m_language_output 
+            this_fetch = self.meta_m_output_language 
 
         res = self.sess.run(this_fetch, feed_dict=feed_dict)
 
@@ -1222,7 +1222,7 @@ class meta_model(object):
                 other_game = self.games[other]
 
                 mapped_embedding = self.get_meta_language_outputs(
-                    meta_dataset, {"x": task_embedding})
+                    intified_task, meta_dataset, {"x": task_embedding})
 
                 names.append(meta_task + ":" + task + "->" + other)
                 _, this_rewards = self.base_embedding_eval(mapped_embedding, other_game, other_buffer)
