@@ -1213,6 +1213,7 @@ class meta_model(object):
         rewards = []
         for meta_task in meta_tasks:
             meta_dataset = self.meta_dataset_cache[meta_task]
+            intified_task = self.intified_tasks[t]
             for task, other in meta_pairings[meta_task]["base"]:
                 task_buffer = self.memory_buffers[task]
                 task_embedding = self.get_base_embedding(task_buffer)
@@ -1220,7 +1221,7 @@ class meta_model(object):
                 other_buffer = self.memory_buffers[other]
                 other_game = self.games[other]
 
-                mapped_embedding = self.get_meta_outputs(
+                mapped_embedding = self.get_meta_language_outputs(
                     meta_dataset, {"x": task_embedding})
 
                 names.append(meta_task + ":" + task + "->" + other)
