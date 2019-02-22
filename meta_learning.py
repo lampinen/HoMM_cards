@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_nontoggling_random_holdout/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_meta_nontoggling/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -81,17 +81,18 @@ config = {
     "memory_buffer_size": 1024, # How many memories of each task are stored
     "meta_batch_size": 768, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
-    "new_tasks": "random",
-#    "new_tasks": [{"game": "straight_flush", "losers": True,
-#                  "black_valuable": False, "suits_rule": False},
-#                  {"game": "straight_flush", "losers": True,
-#                  "black_valuable": False, "suits_rule": True},
-#                  {"game": "straight_flush", "losers": True,
-#                  "black_valuable": True, "suits_rule": False},
-#                  {"game": "straight_flush", "losers": True,
-#                  "black_valuable": True, "suits_rule": True}], # will be removed
-#                                                                # from base tasks
+#    "new_tasks": "random",
+    "new_tasks": [{"game": "straight_flush", "losers": True,
+                  "black_valuable": False, "suits_rule": False},
+                  {"game": "straight_flush", "losers": True,
+                  "black_valuable": False, "suits_rule": True},
+                  {"game": "straight_flush", "losers": True,
+                  "black_valuable": True, "suits_rule": False},
+                  {"game": "straight_flush", "losers": True,
+                  "black_valuable": True, "suits_rule": True}], # will be removed
+                                                                # from base tasks
 
+    "meta_toggling": True, # if false, different tasks for turning ON or OFF
     "new_meta_tasks": [],
     
     "train_language": True, # whether to train language as well (only language
@@ -107,9 +108,15 @@ config = {
 }
 
 config["base_meta_tasks"] = ["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
-config["base_meta_mappings"] = ["turnON_" + o for o in config["option_names"]] + ["turnOF_" + o for o in config["option_names"]]
-#config["base_meta_tasks"] = []#["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
-#config["base_meta_mappings"] = []#["toggle_" + o for o in config["option_names"]]
+if config["meta_toggling"]:
+    config["base_meta_mappings"] = ["toggle_" + o for o in config["option_names"]]
+else:
+    config["base_meta_mappings"] = ["turnON_" + o for o in config["option_names"]] + ["turnOF_" + o for o in config["option_names"]]
+
+## nometa version
+#config["base_meta_tasks"] = []
+#config["base_meta_mappings"] = []
+
 config["base_tasks"] = [{"game": g, "losers": l, "black_valuable": b,
                          "suits_rule": s} for g in config["game_types"] for l in config["losers"] for b in config["black_valuable"] for s in config["suits_rule"]]
 np.random.seed(0) # ideally would randomly assign each run, but that wuold require a little more work for the analysis
@@ -177,24 +184,43 @@ def _get_meta_pairings(base_tasks, meta_tasks, meta_mappings):
     all_meta_tasks = meta_tasks + meta_mappings
     meta_pairings = {mt: {"base": [], "meta": []} for mt in all_meta_tasks}
     for mt in all_meta_tasks:
-        if mt[:4] == "turn":
-            ON_or_OFF = mt[4:6] == "ON"
-            to_toggle = mt[7:]
-            for task in base_tasks: 
-                other = deepcopy(task) 
-                other[to_toggle] = ON_or_OFF 
-                if other in base_tasks:
-                    meta_pairings[mt]["base"].append((_stringify_game(task),
-                                                      _stringify_game(other)))
+        if config["meta_toggling"]:
+	    if mt[:6] == "toggle":
+		to_toggle = mt[7:]
+		for task in base_tasks: 
+		    other = deepcopy(task) 
+		    other[to_toggle] = not other[to_toggle]
+		    if other in base_tasks:
+			meta_pairings[mt]["base"].append((_stringify_game(task),
+							  _stringify_game(other)))
 
-        elif mt[:2] == "is":
-            pos_class = mt[3:]
-            for task in base_tasks: 
-                truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
-                meta_pairings[mt]["base"].append((_stringify_game(task),
-                                                  1*truth_val))
-        else: 
-            raise ValueError("Unknown meta task: %s" % meta_task)
+	    elif mt[:2] == "is":
+		pos_class = mt[3:]
+		for task in base_tasks: 
+		    truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
+		    meta_pairings[mt]["base"].append((_stringify_game(task),
+						      1*truth_val))
+	    else: 
+		raise ValueError("Unknown meta task: %s" % meta_task)
+        else:
+            if mt[:4] == "turn":
+                ON_or_OFF = mt[4:6] == "ON"
+                to_toggle = mt[7:]
+                for task in base_tasks: 
+                    other = deepcopy(task) 
+                    other[to_toggle] = ON_or_OFF 
+                    if other in base_tasks:
+                        meta_pairings[mt]["base"].append((_stringify_game(task),
+                                                          _stringify_game(other)))
+
+            elif mt[:2] == "is":
+                pos_class = mt[3:]
+                for task in base_tasks: 
+                    truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
+                    meta_pairings[mt]["base"].append((_stringify_game(task),
+                                                      1*truth_val))
+            else: 
+                raise ValueError("Unknown meta task: %s" % meta_task)
 
     return meta_pairings
 
