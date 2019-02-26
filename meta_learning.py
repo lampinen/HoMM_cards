@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_noncompositional/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
@@ -97,9 +97,9 @@ config = {
     
     "train_language": True, # whether to train language as well (only language
                             # inputs and only base tasks, for now)
-    "language_compositional": True, # whether language should be used
-                                    # compositionally, which is nice but 
-                                    # increases sentence length
+    "language_compositional": False, # whether language should be used in more
+                                     # complex way, which is nice but makes the
+                                     # network's task harder
     "lang_drop_prob": 0.0, # dropout on language processing features
                             # to try to address overfitting
 
@@ -1184,10 +1184,8 @@ class meta_model(object):
             self.language_input_ph: intified_task
         }
         if meta_class:
-            feed_dict[self.meta_class_ph] = this_y 
             this_fetch = self.meta_t_output_language 
         else:
-            feed_dict[self.meta_target_ph] = this_y
             this_fetch = self.meta_m_output_language 
 
         res = self.sess.run(this_fetch, feed_dict=feed_dict)
