@@ -14,7 +14,7 @@ results_dir = "results/paper_results/"
 result_subdirs = c("nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
                    "basic", #"basic_su_heldout", 
                    "basic_random_holdout_longer", # "basic_only_one", "basic_only_one_ho",
-                   "language", "language_noncompositional", "language_simplified", "language_random_holdout", "language_meta")
+                   "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout")
 
 name_run_type = function(run_type) { # names for plotting
   case_when(run_type == "basic" ~ "Targeted 10% holdout",
@@ -251,8 +251,9 @@ ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, c
 # language results
 
 ```{r}
-language_d = load_d(results_dir, c("language", "language_simplified", "language_random_holdout", "language_meta", "language_noncompositional"), num_runs, "new_language_rewards")
+language_d = load_d(results_dir, c("language", "language_noncompositional", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout"), num_runs, "new_language_rewards")
 
+                   
 language_d = language_d %>%
   mutate(is_su_ho=grepl("su_heldout", run_type),
          is_only_one=grepl("only_one$", run_type),
@@ -307,7 +308,7 @@ meta_d = load_d(results_dir, c("basic",
                                #"basic_su_heldout",
                                "basic_random_holdout_longer",# "basic_only_one", "basic_only_one_ho",
                                #"language", "language_drop_03", "language_drop_05", "language_noncompositional"
-                               "language", "language_random_holdout", "language_simplified", "language_meta"
+                               "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout"
                                ), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
@@ -360,7 +361,8 @@ ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
 # language-induced meta mapping (true) evaluation
 
 ```{r}
-lang_meta_d = load_d(results_dir, c("language_meta", "language_simplified"
+lang_meta_d = load_d(results_dir, c(
+                               "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout"
                                ), num_runs, "new_language_meta_true_losses")
 
 lang_meta_d = lang_meta_d %>%
