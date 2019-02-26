@@ -11,14 +11,18 @@ library(tidyverse)
 num_runs = 10
 results_dir = "results/paper_results/"
 
-result_subdirs = c("nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
+result_subdirs = c(# "nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
                    "basic", #"basic_su_heldout", 
                    "basic_random_holdout_longer", # "basic_only_one", "basic_only_one_ho",
-                   "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout")
+                   #"language", "language_simplified",
+                   "language_noncompositional_old", "language_simplified_random_holdout")
 
 name_run_type = function(run_type) { # names for plotting
   case_when(run_type == "basic" ~ "Targeted 10% holdout",
             run_type == "basic_random_holdout_longer" ~ "Random 50% holdout",
+            run_type == "language_noncompositional_old" ~ "Old language (targeted 10%)",
+            run_type == "language_simplified" ~ "Old language (targeted 10%)",
+            run_type == "language_simplified_random_holdout" ~ "Language (random 50%)",
             T ~ run_type)
 }
 
@@ -74,6 +78,15 @@ theme_set(theme_bw() +
 ```
 
 ```{r}
+name_var = function(var) { # var names for plotting
+  case_when(var %in% c("is_new", "is_new_game") ~ "Held out?",
+            var == "game_type" ~ "Game",
+            var %in% c("run_type", "named_run_type") ~ "Run type",
+#            var == "reward" ~ "Reward",
+            grepl("reward", var) ~ "Average Reward",
+            T ~ var)
+  }
+
 summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, palette="Set2") {
   p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +
     geom_hline(yintercept=0., linetype=2, alpha=0.5) +
@@ -82,7 +95,9 @@ summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, pale
                   fun.ymin=function(x) {mean(x) - 1.96*sd(x)/sqrt(length(x))},
                   fun.ymax=function(x) {mean(x) + 1.96*sd(x)/sqrt(length(x))},
                   width=0.25) +
-    scale_color_brewer(palette=palette)
+    scale_color_brewer(palette=palette) +
+    labs(x=name_var(x_var), y=name_var(y_var)) +
+    guides(color=guide_legend(title=NULL))
     
   if (!is.null(baseline_data)) {
     p = p + 
@@ -92,6 +107,7 @@ summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, pale
                yend=simple_baselines$expected_reward,
                linetype=1, alpha=0.5) 
   }
+  
   
   return(p)
 }
@@ -143,11 +159,11 @@ simple_baselines = baseline_data %>%
   summarize(expected_reward = mean(expected_reward)) %>%
   ungroup()
 
-summary_plot(reward_d %>%
-               filter(epoch == 0),
-             "game_type", "reward", "is_new_game",
-             simple_baselines) +
-  facet_wrap(. ~ named_run_type)
+# summary_plot(reward_d %>%
+#                filter(epoch == 0),
+#              "game_type", "reward", "is_new_game",
+#              simple_baselines) +
+#   facet_wrap(. ~ named_run_type)
 ```
 
 ```{r}
@@ -166,12 +182,10 @@ summary_plot(reward_d %>%
              "game_type", "reward", "is_new_game",
              simple_baselines) +
   facet_wrap(. ~ named_run_type) + 
-  guides(color=guide_legend(title=NULL)) +
-  labs(x="Game type", y="Average reward") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
 ggsave("writing/figures/basic_meta_learning.png", width=5, height=3.5)
-ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_random_holdout_half.png", width=5, height=3.5)
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_random_holdout_half.png", width=5, height=3.5)
 ```
 
 ```{r}
@@ -251,7 +265,9 @@ ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, c
 # language results
 
 ```{r}
-language_d = load_d(results_dir, c("language", "language_noncompositional", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout"), num_runs, "new_language_rewards")
+language_d = load_d(results_dir, c("language_noncompositional_old", 
+                                   #"language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", 
+                                   "language_simplified_random_holdout"), num_runs, "new_language_rewards")
 
                    
 language_d = language_d %>%
@@ -269,26 +285,24 @@ language_d = language_d %>%
 ```
 
 ```{r}
-avg_language_d = language_d %>%
-  select(-game_str) %>%
-  filter(epoch == 0) %>%
-  group_by(run_type, game_type, is_new_game) %>%
-  summarize(avg_reward = mean(reward), sd_reward=sd(reward),
-            se_reward = sd_reward/sqrt(n()), 
-            ci_lo = avg_reward - 1.96*se_reward, 
-            ci_hi = avg_reward + 1.96*se_reward)
-```
-
-```{r}
 ggplot(language_d %>%
          filter(epoch == 0,
                 is_new_game),
-       aes(x=run_type, y=reward, fill=as.factor(run))) +
+       aes(x=named_run_type, y=reward, fill=as.factor(run))) +
   geom_hline(yintercept=0.,
              linetype=2,
              alpha=0.5) +
   geom_violin(position="dodge") +
-  scale_color_brewer(palette="Set2") 
+  geom_point(aes(group=as.factor(run)),
+             size=3,
+             stat="summary", fun.y="mean",
+             position=position_dodge(width=0.9)) +
+  scale_color_brewer(palette="Set2") + 
+  ylim(-0.6, 0.6) +
+  labs(x="Run type",
+       y="Reward density") + 
+  guides(fill=guide_legend(title="Run"))
+ggsave("writing/figures/language_basic_by_run.png", width=5, height=3.5)
 ```
 
 
@@ -297,8 +311,10 @@ summary_plot(language_d %>%
                filter(epoch == 0),
              "game_type", "reward", "is_new_game",
              simple_baselines) +
-  facet_wrap(. ~ run_type)
-ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/crappy_language.png", width=5, height=3)
+  facet_wrap(. ~ run_type) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("writing/figures/language_basic.png", width=5, height=3.5)
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/crappy_language.png", width=5, height=3)
 ```
 
 # meta mapping (true) evaluation
@@ -362,7 +378,8 @@ ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
 
 ```{r}
 lang_meta_d = load_d(results_dir, c(
-                               "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout"
+                              # "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", 
+                               "language_noncompositional_old", "language_simplified", "language_simplified_random_holdout"
                                ), num_runs, "new_language_meta_true_losses")
 
 lang_meta_d = lang_meta_d %>%
@@ -379,26 +396,6 @@ lang_meta_d = lang_meta_d %>%
 ```
 
 ```{r}
-avg_lang_meta_d = lang_meta_d %>%
-  group_by(run_type, named_run_type, run, meta_task, is_new) %>%
-  summarize(avg_reward = mean(reward)) %>%
-  group_by(run_type, named_run_type, meta_task, is_new) %>%
-  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward),
-            se_reward = sd_avg_reward/sqrt(n()), 
-            ci_lo = avg_avg_reward - 1.96*se_reward, 
-            ci_hi = avg_avg_reward + 1.96*se_reward)
-  
-```
-
-```{r}
-ggplot(avg_lang_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
-  geom_bar(stat="identity", position="dodge") +
-  geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi), position="dodge") +
-  scale_fill_brewer(palette="Set2") +
-  facet_wrap(. ~ named_run_type)
-```
-
-```{r}
 summary_plot(lang_meta_d %>%
                filter(epoch == 0),
              "meta_task", "reward", "is_new") +
@@ -406,8 +403,7 @@ summary_plot(lang_meta_d %>%
   guides(color=guide_legend(title=NULL)) +
   labs(x="Game type", y="Average reward") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-# 
-# ggsave("writing/figures/language_meta_mapping.png", width=5, height=3.5)
+ ggsave("writing/figures/language_meta_mapping.png", width=5, height=3.5)
 ```
 # embeddings
 
