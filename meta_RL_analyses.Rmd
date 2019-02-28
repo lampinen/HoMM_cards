@@ -288,7 +288,7 @@ language_d = language_d %>%
 ggplot(language_d %>%
          filter(epoch == 0,
                 is_new_game),
-       aes(x=named_run_type, y=reward, fill=as.factor(run))) +
+       aes(x=run, y=reward, fill=as.factor(run))) +
   geom_hline(yintercept=0.,
              linetype=2,
              alpha=0.5) +
@@ -299,9 +299,10 @@ ggplot(language_d %>%
              position=position_dodge(width=0.9)) +
   scale_color_brewer(palette="Set2") + 
   ylim(-0.6, 0.6) +
-  labs(x="Run type",
-       y="Reward density") + 
-  guides(fill=guide_legend(title="Run"))
+  labs(x="Run",
+       y="Reward density on held-out tasks") + 
+  guides(fill=guide_legend(title="Run")) +
+  facet_wrap(~named_run_type)
 ggsave("writing/figures/language_basic_by_run.png", width=5, height=3.5)
 ```
 
