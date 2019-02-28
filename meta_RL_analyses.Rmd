@@ -311,7 +311,7 @@ summary_plot(language_d %>%
                filter(epoch == 0),
              "game_type", "reward", "is_new_game",
              simple_baselines) +
-  facet_wrap(. ~ run_type) + 
+  facet_wrap(. ~ named_run_type) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("writing/figures/language_basic.png", width=5, height=3.5)
 #ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/crappy_language.png", width=5, height=3)
@@ -324,7 +324,9 @@ meta_d = load_d(results_dir, c("basic",
                                #"basic_su_heldout",
                                "basic_random_holdout_longer",# "basic_only_one", "basic_only_one_ho",
                                #"language", "language_drop_03", "language_drop_05", "language_noncompositional"
-                               "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", "language_simplified_random_holdout"
+                               # "language", "language_simplified",
+                               # "language_meta_nontoggling", "language_nontoggling_random_holdout", 
+                               "language_noncompositional_old", "language_simplified_random_holdout"
                                ), num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%

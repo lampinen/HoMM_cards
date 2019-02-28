@@ -25,10 +25,14 @@
 \setlength{\parindent}{0em}
 
 \begin{document}
+\title{Embedded meta-learning}
+\author{Andrew K. Lampinen}
+\date{}
+\maketitle
 
 \section{Introduction}
-Humans are able to use and reuse knowledge more flexibly than most deep learning models can \citep{Lake2017}. One fundamental reason for this is the separation of knowledge within deep neural networks -- although deep networks represent knowledge about data (in their activations) and knowledge about the structure of tasks (in their parameters), they do not represent any relationships between these. That is, neural networks knowledge about \textbf{what} is being computed is \textbf{inaccessible} by the computations. By contrast, humans are frequently consciously aware of both our representations of input, the things we can do with them, and the relationships between data and tasks. This is true for domains from game playing to natural language understanding. \par
-One of the abilities that this grants humans is rapid adaptation of our behavior. The problem of rapid learning has been partially addressed by meta-learning systems \citep{}. However, humans can take rapidly acquired knowledge and flexibly alter their behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance \textbf{without any retraining} (i.e. zero-shot). Deep learning systems at present lack this representational flexiblity. \par
+Humans are able to use and reuse knowledge more flexibly than most deep learning models can \citep[e.g.][]{Lake2016}. One fundamental reason for this is the separation of knowledge within deep neural networks -- although deep networks represent knowledge about data (in their activations) and knowledge about the structure of tasks (in their parameters), they do not represent any relationships between these. That is, neural networks knowledge about \textbf{what} is being computed is \textbf{inaccessible} by the computations. By contrast, humans are frequently consciously aware of both our representations of input, the things we can do with them, and the relationships between data and tasks. This is true for domains from game playing to natural language understanding. \par
+One of the abilities that this grants humans is rapid adaptation of our behavior. The problem of rapid learning has been partially addressed by meta-learning systems. However, humans can take rapidly acquired knowledge and flexibly alter their behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance \textbf{without any retraining} (i.e. zero-shot). Deep learning systems at present lack this representational flexiblity. \par
 In this paper, we propose a new class of architectures which essentially take a \textbf{functional perspective} on meta-learning. By treating tasks as functions, we can conceptually think of both data \textbf{and} learned functions as transformable. This yields the ability to not only learn to solve new tasks, but to learn how to flexibly transform these solutions in response to changing task demands. We suggest that this ability will be key to building more intelligent and flexible deep learning systems. \par
 In particular, we propose a meta-learning architecture which embeds data (including natural language inputs) and tasks in a shared space, and meta-learns to execute mappings over this space. We demonstrate the greater flexibility of this approach.
 \section{Method}
@@ -156,32 +160,56 @@ These games are simplified analogs of various card games, including poker and bl
 \item \textbf{Switch suit:} Switches which of the suits is more valuable.
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. \par
-In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{} to predict rewards for each bet in each state. The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples. \par   
-We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. \par
+In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure of the game. \par   
+We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. We can also train the system to map language to games, i.e. playing a game based on hearing its name, and then ask whether the system can generalize this to held-out games based on the systematicity of the language. For example, if trained to play ``straight flush'' but never ``losers straight flush,'' will it nevertheless be able to generalize to this case based on its experience with other games? Finally, we can use language denote meta-mappings. \par
 
+\newpage
 \subsubsection{Results}
-\begin{figure}
-
-\end{figure}
 \textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``Losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. It is worth noting that the sample complexity in terms of number of tasks trained on is not that high, even training on 20 tasks leads to good generalization. Furthermore, starting from this ``guess'' at the correct strategy, the system can rapidly learn to achieve optimal performance ($< 20$ epochs, figure TODO). \par
-\begin{figure}
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.66\textwidth]{figures/basic_meta_learning.png}
-\caption{Basic meta-learning successfully generalizes to held out tasks, both when trained on a random sample of half the tasks, or when a targeted subset is held out.}
+\caption{Basic meta-learning successfully generalizes to held out tasks, both when trained on a random sample of half the tasks, or when a targeted subset is held out. The dashed line indicates chance performance, while the solid lines are optimal performance.}
 \label{cards_basic_results}
 \end{figure}
-\textbf{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior. For example, if the system is trained to map games to their losers variations, it can generalize this mapping to a game it has not been trained to map, even if the source or target of that mapping is held out from training. In Fig. \ref{cards_meta_map_results}) we demonstrate this by taking the mapped embedding and evaluating the reward received by playing the targeted game with it. This task is more difficult than simply learning to play a held out game from examples, because the system will actually receive no examples of the target game (when it is held out). Furthermore, in the case of the losers mapping, leaving the strategy unchanged would produce a large negative reward, and chance performance would produce 0 reward, so it is encouraging to see rewards that are substantially above 0. Again, given training the system can learn how to achieve this mapping perfectly. \par
-\begin{figure}
+\newpage
+\textbf{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior. For example, if the system is trained to map games to their losers variations, it can generalize this mapping to a game it has not been trained to map, even if the source or target of that mapping is held out from training. In Fig. \ref{cards_meta_map_results}) we demonstrate this by taking the mapped embedding and evaluating the reward received by playing the targeted game with it. This task is more difficult than simply learning to play a held out game from examples, because the system will actually receive no examples of the target game (when it is held out). Furthermore, in the case of the losers mapping, leaving the strategy unchanged would produce a large negative reward, and chance performance would produce 0 reward, so it is encouraging to see rewards that are substantially above 0. Again, given a small amount of additional training on the new games, the system can learn how to achieve this mapping perfectly. \par
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.66\textwidth]{figures/meta_mapping.png}
-\caption{The system generalizes to meta-mapping new tasks. The system is trained to do the three meta-mappings shown here, and is able to generalize to tasks it has not been trained to map. For example, for the ``losers'' mapping, the sytem is trained to map games to their losers variants. When given a game it has not mapped in this way, it is able to map it to the losers variation. This plot shows the reward produced by taking the mapped embedding and playing the targeted game.}
+\caption{The system generalizes to meta-mapping new tasks. The system is trained to do the three meta-mappings shown here, and is able to generalize these mappings to tasks it has not been trained on. For example, for the ``losers'' mapping, the sytem is trained to map games to their losers variants. When given a game it has not mapped in this way, it is able to map it to the losers variation. This plot shows the reward produced by taking the mapped embedding and playing the targeted game.}
 \label{cards_meta_map_results}
 \end{figure}
-\textbf{Basic language (language $\rightarrow$ task):} \par
-\textbf{Meta language (language $\rightarrow (\text{task} \rightarrow \text{task})$):} \par
-
+\newpage
+\textbf{Basic language (language $\rightarrow$ task):} Next, we show that the system is able to perform a held-out task based on a linguistic description alone. The system is significantly better than chance at this task, as shown in Fig. \ref{cards_language_basic_results}, but it is substantially less successful at this task than at learning from examples. This is perhaps unsurprising, however, since examples contain richer information about the structure of the task. (Note that the targeted 10\% was run using an older version of the code. Results may improve slightly when it is re-run, but based on the random 50\% hold-out results, the change doesn't make too substantial a difference.)\par
+Intriguingly, the system also shows more run-to-run variability in its generalization from language, especially with a targeted hold-out. This suggests that language learning in this context may be quite sensitive to initialization, possibily because of the poverty of the signal relative to the capacity of the network. Interestingly, simply applying dropout does not seem to ameliorate this. \par
+\begin{figure}[H]
+\begin{subfigure}[t]{0.5\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/language_basic.png}
+\caption{Average rewards}
+\end{subfigure}%
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/language_basic_by_run.png}
+\caption{Density plot of rewards received on different held-out tasks on different runs of the model.}
+\end{subfigure}
+\caption{The system generalizes to held out tasks based on language alone. However, it is substantially less good at this task than generalizing to a held-out task based on examples. Furthermore, it shows more run-to-run variability and within-run variability.}
+\label{cards_language_basic_results}
+\end{figure}
+\newpage
+\textbf{Meta language (language $\rightarrow (\text{task} \rightarrow \text{task})$):} Finally, in Fig, \ref{cards_language_meta_results}, we show that the system is able to perform meta-mappings from language comparably to how it performs them from examples. Note that this is in some ways an easier task than the basic language-mapping task. \par
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\textwidth]{figures/language_meta_mapping.png}
+\caption{The system generalizes to meta-mapping new tasks based on language. It performs this comparably to meta-mapping based on examples of mappings.}
+\label{cards_language_meta_results}
+\end{figure}
 
 \section{Discussion}
+
+\bibliographystyle{acm}
+\bibliography{arrr}
+
 
 \end{document}
 
