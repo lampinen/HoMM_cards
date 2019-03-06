@@ -19,15 +19,16 @@ with open("baseline_data.csv", "w") as fout:
                                                  "optimal",
                                                  g.compute_expected_return())) 
 
-                    for sr2 in suits_rule:
-                        for l2 in losers:
-                            for bv2 in black_valuable:
-                                if sr2 == sr and l2 == l and bv2 == bv:
-                                    continue
-                                g2 = card_game(game_type, bv2, sr2, l2)
-                                name2 = _stringify_game(g2)
-                                g2_policy = {hand: max_bet * (g2.hand_to_win_prob[hand] > 0.5) for hand in g2.hands}
-                                fout.write("%s, %s, %f\n" % (
-                                    name,
-                                    name2,
-                                    g.compute_expected_return(policy=g2_policy))) 
+                    for game_type_2 in game_types:
+                        for sr2 in suits_rule:
+                            for l2 in losers:
+                                for bv2 in black_valuable:
+                                    if game_type_2 == game_type and sr2 == sr and l2 == l and bv2 == bv:
+                                        continue
+                                    g2 = card_game(game_type_2, bv2, sr2, l2)
+                                    name2 = _stringify_game(g2)
+                                    g2_policy = {hand: max_bet * (g2.hand_to_win_prob[hand] > 0.5) for hand in g2.hands}
+                                    fout.write("%s, %s, %f\n" % (
+                                        name,
+                                        name2,
+                                        g.compute_expected_return(policy=g2_policy))) 
