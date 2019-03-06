@@ -15,6 +15,7 @@ result_subdirs = c(# "nometa",# "nometa_su_heldout", "nometa_random_holdout_long
                    "basic", #"basic_su_heldout", 
                    "basic_random_holdout_longer", # "basic_only_one", "basic_only_one_ho",
                    #"language", "language_simplified",
+                   "language_noncompositional", "language_simplified", "language_meta_nontoggling",
                    "language_noncompositional_old", "language_simplified_random_holdout")
 
 name_run_type = function(run_type) { # names for plotting
@@ -87,7 +88,7 @@ name_var = function(var) { # var names for plotting
             T ~ var)
   }
 
-summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, palette="Set2") {
+summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NULL, other_baseline_data=NULL, palette="Set2") {
   p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +
     geom_hline(yintercept=0., linetype=2, alpha=0.5) +
     geom_point(stat="summary", fun.y=mean, size=2) +
@@ -99,13 +100,21 @@ summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, pale
     labs(x=name_var(x_var), y=name_var(y_var)) +
     guides(color=guide_legend(title=NULL))
     
-  if (!is.null(baseline_data)) {
+  if (!is.null(optimal_baseline_data)) {
     p = p + 
       annotate("segment",
                x=(1:5)-0.5, xend=(1:5)+0.5,
-               y=simple_baselines$expected_reward,
-               yend=simple_baselines$expected_reward,
+               y=optimal_baseline_data$expected_reward,
+               yend=optimal_baseline_data$expected_reward,
                linetype=1, alpha=0.5) 
+  }
+  
+  if (!is.null(other_baseline_data)) {
+    p = p + 
+      geom_spoke(data=other_baseline_data,
+                 aes(x=game_type, y=expected_reward, angle=0, radius=1),
+                 linetype=2, alpha=0.5,
+                 position=position_nudge(x=-0.5)) 
   }
   
   
@@ -114,11 +123,44 @@ summary_plot = function(data,  x_var, y_var, color_var, baseline_data=NULL, pale
 ```
 
 ```{r}
+check_if_new_game = function(run_type, game_str) {
+  case_when(grepl("su_heldout", run_type) ~ game_str %in% new_game_strs_su_heldout,
+            grepl("only_one$", run_type) ~ game_str %in% new_game_strs_only_one,
+            grepl("only_one_ho", run_type) ~ game_str %in% new_game_strs_only_one_ho,
+            grepl("random", run_type) ~ game_str %in% new_game_strs_random_heldout,
+            T ~ game_str %in% new_game_strs)
+}
+```
+
+
+```{r}
 baseline_data = read_csv("baseline_data.csv") %>%
   mutate(game_type = str_extract(game, "high_card|match|straight_flush|pairs_and_high|sum_under"),
          losers = grepl("l_1", game),
          black_valuable = grepl("bv_1", game),
          suits_rule = grepl("sr_1", game))
+```
+```{r}
+optimal_baselines = baseline_data %>% 
+  filter(policy == "optimal") %>%
+  group_by(game_type) %>%
+  summarize(expected_reward = mean(expected_reward)) %>%
+  ungroup()
+```
+
+And "baselines" which show the performance using strategy from most correlated prior game
+
+```{r}
+most_correlated_baselines = crossing(run_type=result_subdirs, baseline_data) %>%
+  mutate(is_new_game = check_if_new_game(run_type, game)) %>%
+  filter((!is_new_game & policy == "optimal") | (policy != "optimal" & !check_if_new_game(run_type, policy))) %>%
+  group_by(run_type, game, is_new_game, game_type, losers, black_valuable, suits_rule) %>%
+  summarize(optimal_expected_reward = max(expected_reward)) %>%
+  group_by(run_type, game_type, is_new_game) %>%
+  summarize(expected_reward = mean(optimal_expected_reward)) %>%
+  mutate(is_new_game = factor(is_new_game, levels=c(F, T), labels=c("Trained", "Held out")),
+         named_run_type = name_run_type(run_type))
+
 ```
 
 # meta-learning tests
@@ -137,7 +179,7 @@ reward_d = reward_d %>%
          losers = grepl("l_1", game_str),
          black_valuable = grepl("bv_1", game_str),
          suits_rule = grepl("sr_1", game_str),
-         is_new_game = (is_default & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) | (is_only_one & game_str %in% new_game_strs_only_one) | (is_only_one_ho & game_str %in% new_game_strs_only_one_ho),
+         is_new_game = check_if_new_game(run_type, game_str),
          is_new_game = factor(is_new_game, labels=c("Trained", "Held out")))
 ```
 
@@ -153,16 +195,11 @@ avg_reward_d = reward_d %>%
 ```
 
 ```{r}
-simple_baselines = baseline_data %>% 
-  filter(policy == "optimal") %>%
-  group_by(game_type) %>%
-  summarize(expected_reward = mean(expected_reward)) %>%
-  ungroup()
 
 # summary_plot(reward_d %>%
 #                filter(epoch == 0),
 #              "game_type", "reward", "is_new_game",
-#              simple_baselines) +
+#              optimal_baselines) +
 #   facet_wrap(. ~ named_run_type)
 ```
 
@@ -171,20 +208,24 @@ summary_plot(reward_d %>%
                filter(epoch == 0,
                       run_type == "basic"),
              "game_type", "reward", "is_new_game",
-             simple_baselines) 
-ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic.png", width=5, height=3)
+             optimal_baselines,
+             most_correlated_baselines %>%
+               filter(run_type == "basic",
+                      is_new_game == "Held out")) 
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic.png", width=5, height=3)
 ```
 
 ```{r}
 summary_plot(reward_d %>%
-               filter(epoch == 0,
-                      run_type %in% c("basic", "basic_random_holdout_longer")),
+               filter(epoch == 0),
              "game_type", "reward", "is_new_game",
-             simple_baselines) +
+             optimal_baselines,
+             most_correlated_baselines %>%
+               filter(is_new_game == "Held out")) +
   facet_wrap(. ~ named_run_type) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
-ggsave("writing/figures/basic_meta_learning.png", width=5, height=3.5)
+#ggsave("writing/figures/basic_meta_learning.png", width=5, height=3.5)
 #ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_random_holdout_half.png", width=5, height=3.5)
 ```
 
@@ -215,7 +256,8 @@ sweep_d = sweep_d %>%
          losers = grepl("l_1", game_str),
          black_valuable = grepl("bv_1", game_str),
          suits_rule = grepl("sr_1", game_str),
-         is_new_game = (is_default & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) | (is_only_one & game_str %in% new_game_strs_only_one) | (is_only_one_ho & game_str %in% new_game_strs_only_one_ho))
+         is_new_game = check_if_new_game(run_type, game_str))
+         
 ```
 
 ```{r}
@@ -249,7 +291,7 @@ ggplot(avg_sweep_d %>%
   xlab("Meta Set Size") +
   facet_wrap(~ game_type)
 
-ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_sweeping.png", width=5, height=3)
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_sweeping.png", width=5, height=3)
 ```
 
 ```{r}
@@ -266,7 +308,8 @@ ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, c
 
 ```{r}
 language_d = load_d(results_dir, c("language_noncompositional_old", 
-                                   #"language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", 
+                                   #"language",  "language_nontoggling_random_holdout", 
+                                   "language_simplified", "language_meta_nontoggling", "language_noncompositional",
                                    "language_simplified_random_holdout"), num_runs, "new_language_rewards")
 
                    
@@ -281,7 +324,7 @@ language_d = language_d %>%
          losers = grepl("l_1", game_str),
          black_valuable = grepl("bv_1", game_str),
          suits_rule = grepl("sr_1", game_str),
-         is_new_game = (is_default & game_str %in% new_game_strs) | (is_su_ho & game_str %in% new_game_strs_su_heldout) | (is_random_ho & game_str %in% new_game_strs_random_heldout) | (is_only_one & game_str %in% new_game_strs_only_one) | (is_only_one_ho & game_str %in% new_game_strs_only_one_ho))
+         is_new_game = check_if_new_game(run_type, game_str))
 ```
 
 ```{r}
@@ -303,7 +346,7 @@ ggplot(language_d %>%
        y="Reward density on held-out tasks") + 
   guides(fill=guide_legend(title="Run")) +
   facet_wrap(~named_run_type)
-ggsave("writing/figures/language_basic_by_run.png", width=5, height=3.5)
+#ggsave("writing/figures/language_basic_by_run.png", width=5, height=3.5)
 ```
 
 
@@ -311,7 +354,7 @@ ggsave("writing/figures/language_basic_by_run.png", width=5, height=3.5)
 summary_plot(language_d %>%
                filter(epoch == 0),
              "game_type", "reward", "is_new_game",
-             simple_baselines) +
+             optimal_baselines) +
   facet_wrap(. ~ named_run_type) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("writing/figures/language_basic.png", width=5, height=3.5)
@@ -321,14 +364,7 @@ ggsave("writing/figures/language_basic.png", width=5, height=3.5)
 # meta mapping (true) evaluation
 
 ```{r}
-meta_d = load_d(results_dir, c("basic", 
-                               #"basic_su_heldout",
-                               "basic_random_holdout_longer",# "basic_only_one", "basic_only_one_ho",
-                               #"language", "language_drop_03", "language_drop_05", "language_noncompositional"
-                               # "language", "language_simplified",
-                               # "language_meta_nontoggling", "language_nontoggling_random_holdout", 
-                               "language_noncompositional_old", "language_simplified_random_holdout"
-                               ), num_runs, "new_meta_true_losses")
+meta_d = load_d(results_dir, result_subdirs, num_runs, "new_meta_true_losses")
 
 meta_d = meta_d %>%
   filter(epoch == 0) %>%
@@ -339,7 +375,7 @@ meta_d = meta_d %>%
          is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
   gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
-  mutate(is_new = (is_default & (source %in% new_game_strs | target %in% new_game_strs)) | (is_random_ho & (source %in% new_game_strs_random_heldout | target %in% new_game_strs_random_heldout)) | (is_only_one & (source %in% new_game_strs_only_one | target %in% new_game_strs_only_one)) | (is_su_ho & (source %in% new_game_strs_su_heldout | target %in% new_game_strs_su_heldout))| (is_only_one_ho & (source %in% new_game_strs_only_one_ho | target %in% new_game_strs_only_one_ho)),
+  mutate(is_new = check_if_new_game(run_type, source) | check_if_new_game(run_type, target),
          is_new = factor(is_new, labels=c("Trained", "Held out")))
 ```
 
@@ -373,8 +409,8 @@ summary_plot(meta_d %>%
   labs(x="Game type", y="Average reward") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_basic_random_meta.png", width=5, height=3.5)
-ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_basic_random_meta.png", width=5, height=3.5)
+#ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
 ```
 
 # language-induced meta mapping (true) evaluation
@@ -382,7 +418,8 @@ ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
 ```{r}
 lang_meta_d = load_d(results_dir, c(
                               # "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", 
-                               "language_noncompositional_old", "language_simplified", "language_simplified_random_holdout"
+                               "language_noncompositional_old", "language_simplified", "language_simplified_random_holdout",
+                               "language_meta_nontoggling", "language_noncompositional"
                                ), num_runs, "new_language_meta_true_losses")
 
 lang_meta_d = lang_meta_d %>%
@@ -394,7 +431,7 @@ lang_meta_d = lang_meta_d %>%
          is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
   gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
-  mutate(is_new = (is_default & (source %in% new_game_strs | target %in% new_game_strs)) | (is_random_ho & (source %in% new_game_strs_random_heldout | target %in% new_game_strs_random_heldout)) | (is_only_one & (source %in% new_game_strs_only_one | target %in% new_game_strs_only_one)) | (is_su_ho & (source %in% new_game_strs_su_heldout | target %in% new_game_strs_su_heldout))| (is_only_one_ho & (source %in% new_game_strs_only_one_ho | target %in% new_game_strs_only_one_ho)),
+  mutate(is_new = check_if_new_game(run_type, source) | check_if_new_game(run_type, target),
          is_new = factor(is_new, labels=c("Trained", "Held out")))
 ```
 
@@ -406,7 +443,7 @@ summary_plot(lang_meta_d %>%
   guides(color=guide_legend(title=NULL)) +
   labs(x="Game type", y="Average reward") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
- ggsave("writing/figures/language_meta_mapping.png", width=5, height=3.5)
+ #ggsave("writing/figures/language_meta_mapping.png", width=5, height=3.5)
 ```
 # embeddings
 
