@@ -14,9 +14,11 @@ results_dir = "results/paper_results/"
 result_subdirs = c(# "nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
                    "basic", #"basic_su_heldout", 
                    "basic_random_holdout_longer", # "basic_only_one", "basic_only_one_ho",
+                   "meta_batch_64", "meta_batch_128", "meta_batch_256",
                    #"language", "language_simplified",
                    "language_noncompositional", "language_simplified", "language_meta_nontoggling",
-                   "language_noncompositional_old", "language_simplified_random_holdout")
+                   "language_noncompositional_old", "language_simplified_random_holdout",
+                   "language_mb_128_ne_15","language_mb_128_ne_20")
 
 name_run_type = function(run_type) { # names for plotting
   case_when(run_type == "basic" ~ "Targeted 10% holdout",
@@ -283,19 +285,20 @@ ggplot(avg_sweep_d, aes(x=size, color=is_new_game, y=avg_reward)) +
 
 ```{r}
 ggplot(avg_sweep_d %>%
-         filter(run_type == "basic"), aes(x=size, color=is_new_game, y=avg_reward)) +
+         filter(run_type == "basic" | run_type == "meta_batch_256"), aes(x=size, color=is_new_game, y=avg_reward)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
   scale_color_brewer(palette="Set2") +
   xlab("Meta Set Size") +
-  facet_wrap(~ game_type)
+  facet_grid(game_type ~ run_type)
 
 #ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_sweeping.png", width=5, height=3)
 ```
 
 ```{r}
-ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, color=named_run_type, y=avg_reward)) +
+ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "meta_batch_256", "meta_batch_128", "meta_batch_64", "language_mb_128_ne_15"),
+                              size < 200), aes(x=size, color=named_run_type, y=avg_reward)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin=ci_lo, ymax=ci_hi)) +
@@ -310,6 +313,7 @@ ggplot(avg_sweep_d %>% filter(run_type %in% c("basic", "nometa")), aes(x=size, c
 language_d = load_d(results_dir, c("language_noncompositional_old", 
                                    #"language",  "language_nontoggling_random_holdout", 
                                    "language_simplified", "language_meta_nontoggling", "language_noncompositional",
+                                   "language_mb_128_ne_15","language_mb_128_ne_20",
                                    "language_simplified_random_holdout"), num_runs, "new_language_rewards")
 
                    
@@ -419,6 +423,7 @@ summary_plot(meta_d %>%
 lang_meta_d = load_d(results_dir, c(
                               # "language", "language_simplified", "language_meta_nontoggling", "language_nontoggling_random_holdout", 
                                "language_noncompositional_old", "language_simplified", "language_simplified_random_holdout",
+                               "language_mb_128_ne_15","language_mb_128_ne_20",
                                "language_meta_nontoggling", "language_noncompositional"
                                ), num_runs, "new_language_meta_true_losses")
 
