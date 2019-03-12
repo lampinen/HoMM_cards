@@ -57,7 +57,7 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 20000,
+    "max_base_epochs": 5000,
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/joint_lnex_mb_256_ne_20/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/joint_lnex_mb_256_ne_5/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 30, 50, 100, 200, 400, 800], # if not None,
@@ -494,7 +494,12 @@ class meta_model(object):
                                                        False)
 
         #print(self.language_function_emb)
-        self.joint_lnex_function_emb = 0.5*(self.guess_base_function_emb + self.language_function_emb)
+#        self.joint_lnex_function_emb = 0.5*(self.guess_base_function_emb + self.language_function_emb)
+        self.lnex_ex_weight = tf.get_variable("lnex_ex_weight", [1],
+                                              initializer=tf.constant(0.5),
+                                              dtype=tf.float32)
+        sig_ex_w = tf.nn.sigmoid(self.lnex_ex_weight)
+        self.joint_lnex_function_emb = sig_ex_w*self.guess_base_function_emb + (1-sig_ex_w)*self.language_function_emb
 
 
         # hyper_network: emb -> (f: emb -> emb) 
