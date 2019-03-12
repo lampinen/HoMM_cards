@@ -57,7 +57,7 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 40000,
+    "max_base_epochs": 10000,
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
@@ -71,15 +71,15 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/language_noncompositional/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/joint_lnex_lw_mb_128_ne_10/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
-    "sweep_meta_batch_sizes": [10, 20, 50, 100, 200, 400, 800], # if not None,
-                                                                # eval each at
-                                                                # training ends
+    "sweep_meta_batch_sizes": [10, 20, 30, 50, 100, 200, 400, 800], # if not None,
+                                                                    # eval each at
+                                                                    # training ends
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
-    "meta_batch_size": 768, # how many meta-learner sees
+    "meta_batch_size": 128, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
 #    "new_tasks": "random",
     "new_tasks": [{"game": "straight_flush", "losers": True,
@@ -96,10 +96,11 @@ config = {
     "new_meta_tasks": [],
     
     "train_language": True, # whether to train language as well (only language
-                            # inputs and only base tasks, for now)
-    "language_compositional": False, # whether language should be used in more
-                                     # complex way, which is nice but makes the
-                                     # network's task harder
+                            # inputs, for now)
+    "train_joint_lnex": True, # whether to train joint language + examples
+    "language_compositional": True, # whether language should be used in more
+                                    # complex way, which is nice but makes the
+                                    # network's task harder
     "lang_drop_prob": 0.0, # dropout on language processing features
                             # to try to address overfitting
 
@@ -493,6 +494,12 @@ class meta_model(object):
                                                        False)
 
         #print(self.language_function_emb)
+#        self.joint_lnex_function_emb = 0.5*(self.guess_base_function_emb + self.language_function_emb)
+        self.lnex_ex_weight = tf.get_variable("lnex_ex_weight",
+                                              initializer=tf.constant(0.5),
+                                              dtype=tf.float32)
+        sig_ex_w = tf.nn.sigmoid(self.lnex_ex_weight)
+        self.joint_lnex_function_emb = sig_ex_w*self.guess_base_function_emb + (1-sig_ex_w)*self.language_function_emb
 
 
         # hyper_network: emb -> (f: emb -> emb) 
@@ -560,6 +567,8 @@ class meta_model(object):
         self.fed_emb_task_params = _hyper_network(self.feed_embedding_ph)
         self.language_task_params = _hyper_network(self.language_function_emb)
 
+        self.joint_lnex_task_params = _hyper_network(self.joint_lnex_function_emb)
+
         # task network
         def _task_network(task_params, processed_input):
             hweights, hbiases = task_params
@@ -604,6 +613,12 @@ class meta_model(object):
         self.meta_m_output_language = _task_network(self.language_task_params,
                                                     self.meta_input_ph)
 
+        self.base_raw_output_joint_lnex = _task_network(self.joint_lnex_task_params,
+                                                      processed_input)
+        self.base_output_joint_lnex = _output_mapping(self.base_raw_output_joint_lnex)
+        self.base_output_softmax_joint_lnex = tf.nn.softmax(
+            config["softmax_beta"] * self.base_output_joint_lnex)
+
         # have to mask base output because can only learn about the action 
         # actually taken
         self.base_target_mask_ph = tf.placeholder(
@@ -613,6 +628,8 @@ class meta_model(object):
         masked_base_fed_emb_output = tf.boolean_mask(self.base_output_fed_emb,
                                                      self.base_target_mask_ph)
         masked_base_language_output = tf.boolean_mask(self.base_output_language,
+                                                     self.base_target_mask_ph)
+        masked_base_joint_lnex_output = tf.boolean_mask(self.base_output_joint_lnex,
                                                      self.base_target_mask_ph)
         masked_base_target = tf.boolean_mask(self.base_target_ph,
                                              self.base_target_mask_ph)
@@ -627,6 +644,10 @@ class meta_model(object):
         self.base_language_loss = tf.square(
             masked_base_language_output - masked_base_target)
         self.total_base_language_loss = tf.reduce_mean(self.base_language_loss)
+
+        self.base_joint_lnex_loss = tf.square(
+            masked_base_joint_lnex_output - masked_base_target)
+        self.total_base_joint_lnex_loss = tf.reduce_mean(self.base_joint_lnex_loss)
 
         self.meta_t_loss = tf.reduce_sum(
             tf.square(self.meta_t_output - processed_class), axis=1)
@@ -649,6 +670,8 @@ class meta_model(object):
         self.base_train = optimizer.minimize(self.total_base_loss)
         self.base_language_train = optimizer.minimize(
             self.total_base_language_loss)
+        self.base_joint_lnex_train = optimizer.minimize(
+            self.total_base_joint_lnex_loss)
         self.meta_t_train = optimizer.minimize(self.total_meta_t_loss)
         self.meta_m_train = optimizer.minimize(self.total_meta_m_loss)
 
@@ -826,17 +849,31 @@ class meta_model(object):
             self.base_input_ph: input_buff,
             self.language_input_ph: intified_task,
             self.lang_keep_ph: self.lang_keep_prob, 
+            #self.base_outcome_ph: output_buff,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask,
+            self.keep_prob_ph: self.tkp,
+            self.lr_ph: lr
+        }
+        self.sess.run(self.base_language_train, feed_dict=feed_dict)
+
+
+    def base_joint_lnex_train_step(self, intified_task, memory_buffer, lr):
+        input_buff, output_buff = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.base_input_ph: input_buff,
+            self.language_input_ph: intified_task,
+            self.lang_keep_ph: self.lang_keep_prob, 
+            self.guess_input_mask_ph: self._random_guess_mask(self.memory_buffer_size),
             self.base_outcome_ph: output_buff,
             self.base_target_ph: targets,
             self.base_target_mask_ph: target_mask,
             self.keep_prob_ph: self.tkp,
             self.lr_ph: lr
         }
-#        print("Language train pre/post")
-#        print(self.get_language_embedding(intified_task))
-        self.sess.run(self.base_language_train, feed_dict=feed_dict)
-#        print(self.get_language_embedding(intified_task))
-
+        self.sess.run(self.base_joint_lnex_train, feed_dict=feed_dict)
+        o
 
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
         if encoded_hands is not None:
@@ -960,6 +997,79 @@ class meta_model(object):
         else:
             return names, losses
 
+    
+    def base_joint_lnex_eval(self, game, intified_task, memory_buffer, return_rewards=True, meta_batch_size=None):
+        input_buff, output_buff = memory_buffer.get_memories()
+        targets, target_mask = self._outcomes_to_targets(output_buff)
+        feed_dict = {
+            self.keep_prob_ph: 1.,
+            self.lang_keep_ph: 1., 
+            self.language_input_ph: intified_task,
+            self.guess_input_mask_ph: self._random_guess_mask(
+                self.memory_buffer_size, meta_batch_size=meta_batch_size),
+            self.base_outcome_ph: output_buff,
+            self.base_input_ph: input_buff,
+            self.base_target_ph: targets,
+            self.base_target_mask_ph: target_mask
+        }
+        fetches = [self.total_base_joint_lnex_loss]
+        if return_rewards:
+            fetches.append(self.base_output_softmax_joint_lnex)
+        res = self.sess.run(fetches, feed_dict=feed_dict)
+        if return_rewards:
+            loss, act_probs = res
+            avg_reward = self.reward_eval_helper(game, act_probs, input_buff[:, :12])
+            return loss, avg_reward 
+        else:
+            return res
+
+
+    def run_base_joint_lnex_eval(self, return_rewards=True, include_new=False, sweep_meta_batch_sizes=False):
+        if include_new:
+            tasks = self.all_base_tasks
+        else:
+            tasks = self.base_tasks
+
+
+        losses = [] 
+        rewards = []
+        if sweep_meta_batch_sizes:
+            for meta_batch_size in sweep_meta_batch_sizes:
+                this_losses = [] 
+                this_rewards = []
+                for task in tasks:
+                    task_str = _stringify_game(task)
+                    intified_task = self.intified_tasks[task_str]
+                    memory_buffer = self.memory_buffers[task_str]
+                    game = self.games[task_str]
+                    res = self.base_joint_lnex_eval(
+                        game, intified_task, memory_buffer,
+                        return_rewards=return_rewards,
+                        meta_batch_size=meta_batch_size)
+                    this_losses.append(res[0])
+                    if return_rewards:
+                        this_rewards.append(res[1])
+                losses.append(this_losses)
+                rewards.append(this_rewards)
+        else:
+            for task in tasks:
+                task_str = _stringify_game(task)
+                intified_task = self.intified_tasks[task_str]
+                memory_buffer = self.memory_buffers[task_str]
+                game = self.games[task_str]
+                res = self.base_joint_lnex_eval(
+                    game, intified_task, memory_buffer,
+                    return_rewards=return_rewards)
+                losses.append(res[0])
+                if return_rewards:
+                    rewards.append(res[1])
+
+        names = [_stringify_game(t) for t in tasks]
+        if return_rewards:
+            return names, losses, rewards
+        else:
+            return names, losses
+
 
     def base_embedding_eval(self, embedding, game, memory_buffer, return_rewards=True):
         input_buff, output_buff = memory_buffer.get_memories()
@@ -1003,6 +1113,19 @@ class meta_model(object):
             self.language_input_ph: intified_task
         }
         res = self.sess.run(self.language_function_emb, feed_dict=feed_dict)
+        return res
+
+
+    def get_joint_lnex_embedding(self, intified_task):
+        feed_dict = {
+            self.keep_prob_ph: 1.,
+            self.lang_keep_ph: 1.,
+            self.base_input_ph: input_buff,
+            self.guess_input_mask_ph: np.ones([self.memory_buffer_size]),
+            self.base_outcome_ph: output_buff,
+            self.language_input_ph: intified_task
+        }
+        res = self.sess.run(self.joint_lnex_function_emb, feed_dict=feed_dict)
         return res
 
 
@@ -1303,7 +1426,10 @@ class meta_model(object):
         lang_filename = filename_prefix + "_language_losses.csv"
         lang_reward_filename = filename_prefix + "_language_rewards.csv"
         lang_meta_filename = filename_prefix + "_language_meta_true_losses.csv"
-        with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta, open(lang_filename, "w") as fout_lang, open(lang_reward_filename, "w") as fout_lang_reward, open(lang_meta_filename, "w") as fout_lang_meta:
+        lnex_filename = filename_prefix + "_joint_lnex_losses.csv"
+        lnex_reward_filename = filename_prefix + "_joint_lnex_rewards.csv"
+        lnex_sweep_filename = filename_prefix + "_joint_lnex_sweep_rewards.csv"
+        with open(loss_filename, "w") as fout, open(reward_filename, "w") as fout_reward, open(meta_filename, "w") as fout_meta, open(lang_filename, "w") as fout_lang, open(lang_reward_filename, "w") as fout_lang_reward, open(lang_meta_filename, "w") as fout_lang_meta, open(lnex_filename, "w") as fout_lnex, open(lnex_reward_filename, "w") as fout_lnex_reward:
             base_names, base_losses, base_rewards = self.run_base_eval(
                 include_new=include_new)
             meta_names, meta_losses = self.run_meta_loss_eval(
@@ -1320,6 +1446,7 @@ class meta_model(object):
             meta_true_format = ", ".join(["%f" for _ in meta_true_names]) + "\n"
             
             train_language = config["train_language"]
+            train_joint_lnex = config["train_joint_lnex"]
             if train_language:
                 (base_lang_names, base_lang_losses, 
                  base_lang_rewards) = self.run_base_language_eval(
@@ -1336,6 +1463,14 @@ class meta_model(object):
                 lang_loss_format = ", ".join(["%f" for _ in base_lang_names + meta_lang_names]) + "\n"
                 lang_reward_format = ", ".join(["%f" for _ in base_lang_names]) + "\n"
                 lang_meta_true_format = ", ".join(["%f" for _ in meta_lang_true_names]) + "\n"
+                if train_joint_lnex:
+                    (base_lnex_names, base_lnex_losses, 
+                     base_lnex_rewards) = self.run_base_joint_lnex_eval(
+                        include_new=include_new)
+                    fout_lnex.write("epoch, " + ", ".join(base_lnex_names) + "\n")
+                    fout_lnex_reward.write("epoch, " + ", ".join(base_lnex_names) + "\n")
+                    lnex_loss_format = ", ".join(["%f" for _ in base_lnex_names]) + "\n"
+                    lnex_reward_format = ", ".join(["%f" for _ in base_lnex_names]) + "\n"
 
             s_epoch  = "0, "
             curr_losses = s_epoch + (loss_format % tuple(
@@ -1357,6 +1492,13 @@ class meta_model(object):
                 fout_lang.write(curr_lang_losses)
                 fout_lang_reward.write(curr_lang_rewards)
                 fout_lang_meta.write(curr_meta_lang_true)
+                if train_joint_lnex:
+                    curr_lnex_losses = s_epoch + (lnex_loss_format % tuple(
+                        base_lnex_losses))
+                    curr_lnex_rewards = s_epoch + (lnex_reward_format % tuple(
+                        base_lnex_rewards))
+                    fout_lnex.write(curr_lnex_losses)
+                    fout_lnex_reward.write(curr_lnex_rewards)
 
             if config["sweep_meta_batch_sizes"] is not None:
                 with open(sweep_filename, "w") as fout_sweep:
@@ -1366,6 +1508,14 @@ class meta_model(object):
                     for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
                         swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
                         fout_sweep.write(swept_rewards)
+                if train_joint_lnex: 
+                    with open(lnex_sweep_filename, "w") as fout_lnex_sweep:
+                        lnex_sweep_names, lnex_sweep_losses, lnex_sweep_rewards = self.run_base_joint_lnex_eval(
+                            include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
+                        fout_lnex_sweep.write("epoch, size, " + ", ".join(base_names) + "\n")
+                        for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
+                            swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(lnex_sweep_rewards[i]))
+                            fout_lnex_sweep.write(swept_rewards)
 
             if include_new:
                 tasks = self.all_tasks
@@ -1416,6 +1566,10 @@ class meta_model(object):
                             self.base_language_train_step(
                                 intified_task, memory_buffer, 
                                 language_learning_rate)
+                            if train_joint_lnex:
+                                self.base_joint_lnex_train_step(
+                                    intified_task, memory_buffer, 
+                                    language_learning_rate)
 
                 if epoch % save_every == 0:
                     s_epoch  = "%i, " % epoch
@@ -1449,6 +1603,16 @@ class meta_model(object):
                         fout_lang.write(curr_lang_losses)
                         fout_lang_reward.write(curr_lang_rewards)
                         fout_lang_meta.write(curr_meta_lang_true)
+                        if train_joint_lnex:
+                            (_, base_lnex_losses, 
+                             base_lnex_rewards) = self.run_base_joint_lnex_eval(
+                                include_new=include_new)
+                            curr_lnex_losses = s_epoch + (lnex_loss_format % tuple(
+                                base_lnex_losses))
+                            curr_lnex_rewards = s_epoch + (lnex_reward_format % tuple(
+                                base_lnex_rewards))
+                            fout_lnex.write(curr_lnex_losses)
+                            fout_lnex_reward.write(curr_lnex_rewards)
 			print(curr_losses, curr_lang_losses)
                         if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
                             print("Early stop!")
@@ -1477,6 +1641,13 @@ class meta_model(object):
                     for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
                         swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(sweep_rewards[i]))
                         fout_sweep.write(swept_rewards)
+                if train_joint_lnex: 
+                    with open(lnex_sweep_filename, "a") as fout_lnex_sweep:
+                        lnex_sweep_names, lnex_sweep_losses, lnex_sweep_rewards = self.run_base_joint_lnex_eval(
+                            include_new=include_new, sweep_meta_batch_sizes=config["sweep_meta_batch_sizes"])
+                        for i, swept_batch_size in enumerate(config["sweep_meta_batch_sizes"]):
+                            swept_rewards = s_epoch + ("%i, " % swept_batch_size) + (reward_format % tuple(lnex_sweep_rewards[i]))
+                            fout_lnex_sweep.write(swept_rewards)
 
 
     def save_embeddings(self, filename, meta_task=None,
