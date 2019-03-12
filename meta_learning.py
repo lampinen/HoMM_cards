@@ -57,7 +57,7 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 5000,
+    "max_base_epochs": 10000,
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/joint_lnex_mb_256_ne_5/",
+    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/joint_lnex_lw_mb_128_ne_10/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 30, 50, 100, 200, 400, 800], # if not None,
@@ -79,7 +79,7 @@ config = {
                                                                     # training ends
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
-    "meta_batch_size": 256, # how many meta-learner sees
+    "meta_batch_size": 128, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
 #    "new_tasks": "random",
     "new_tasks": [{"game": "straight_flush", "losers": True,
@@ -495,7 +495,7 @@ class meta_model(object):
 
         #print(self.language_function_emb)
 #        self.joint_lnex_function_emb = 0.5*(self.guess_base_function_emb + self.language_function_emb)
-        self.lnex_ex_weight = tf.get_variable("lnex_ex_weight", [1],
+        self.lnex_ex_weight = tf.get_variable("lnex_ex_weight",
                                               initializer=tf.constant(0.5),
                                               dtype=tf.float32)
         sig_ex_w = tf.nn.sigmoid(self.lnex_ex_weight)
