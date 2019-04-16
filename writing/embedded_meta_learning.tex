@@ -150,12 +150,25 @@ Similarly, we could map from language to a task embedding, and then ask how well
 
 \section{Experiments}
 
-\subsection{Boolean functions}
-As a proof of concept, we first evaluated the system on a simple task of computing boolean functions on boolean inputs. Specifically, we can imagine mapping from binary-valued input vectors to a single binary output representing the evaluation of some logical proposition on the input. We train the system to figure out how to compute the predicate from seeing a subset of the (input, output) pairs. \par   
-We can then train the system to do various meta-mappings, for example identifying certain types of functions (like XOR) or negating predicates. \par
+%\subsection{Boolean functions}
+%As a proof of concept, we first evaluated the system on a simple task of computing boolean functions on boolean inputs. Specifically, we can imagine mapping from binary-valued input vectors to a single binary output representing the evaluation of some logical proposition on the input. We train the system to figure out how to compute the predicate from seeing a subset of the (input, output) pairs. \par   
+%We can then train the system to do various meta-mappings, for example identifying certain types of functions (like XOR) or negating predicates. \par
+%
+\subsection{Learning multivariate polynomials}
+As a proof of concept, we first evaluated the system on the simple task of learning polynomials in 4 variables of degree $\leq 2$ (i.e. the task was to learn functions of the form $f: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $f \in \mathcal{P}_2 \left(\mathbb{R}\right)$). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying a polynomial by a constant, squaring a polynomial, or permuting its input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. \par
+%% TODO: appendix
+We randomly sampled the train and test polynomials as follows:
+\begin{enumerate}
+\item Sample the number of relevant variables ($k$) uniformly at random from 0 (i.e. a constant) to the total number of variables.
+\item Sample the subset of $k$ variables that are relevant uniformly at random.
+\item For each term combining the relevant variables (including the intercept), include the term with probability 0.5. If so give it a random intercept drawn from $\mathcal{N}(0, 2.5)$.
+\end{enumerate}
+The data points were sampled uniformly from $[-1, 1]$ independently for each polynomial. \par
+\subsubsection{Results}
+
 
 \subsection{A stochastic learning setting: simple card games}
-Our next case study was in the setting of simple card games, played with two suits, and 4 values per suit. In our setup, each hand in a game has a win probability (proportional to how it ranks against all other possible hands). The agent is dealt a hand, and then has to choose to bet 0, 1, or 2. If it wins, it is rewarded the value of the bet, if it loses, it receives the negative of the value. This doesn't require long term planning, but is nevertheless not precisely a supervised problem, since the feedback is stochastic. We considered a variety of games:
+Our next case study was in the setting of simple card games, played with two suits, and 4 values per suit. In our setup, each hand in a game has a win probability (proportional to how it ranks against all other possible hands). The agent is dealt a hand, and then has to choose to bet 0, 1, or 2. If it wins, it is rewarded the value of the bet, if it loses, it receives the negative of the value. This doesn't require long term planning, but does incorporate the stochastic feedback aspect of reinforcement learning. We considered a variety of games:
 \begin{itemize}
 \item \textbf{High card:} Highest card wins.
 \item \textbf{Pairs and high:} Same as high card, except pairs are more valuable, and same suit pairs are even more valuable.
@@ -170,7 +183,7 @@ These games are simplified analogs of various card games, including poker and bl
 \item \textbf{Switch suit:} Switches which of the suits is more valuable.
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. \par
-In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure of the game. \par   
+In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as still a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure of the game. \par   
 We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. We can also train the system to map language to games, i.e. playing a game based on hearing its name, and then ask whether the system can generalize this to held-out games based on the systematicity of the language. For example, if trained to play ``straight flush'' but never ``losers straight flush,'' will it nevertheless be able to generalize to this case based on its experience with other games? Finally, we can use language denote meta-mappings. \par
 
 \newpage
