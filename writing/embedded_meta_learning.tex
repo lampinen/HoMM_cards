@@ -1,4 +1,15 @@
-\documentclass[11pt]{article}
+\documentclass{article}
+
+\usepackage{neurips_2019}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
 
 \usepackage{subcaption}
 \usepackage{graphicx}
@@ -8,7 +19,6 @@
 \usepackage{relsize}
 \usepackage{natbib}
 \usepackage{float}
-\usepackage[margin=1in]{geometry}
 \usepackage{tikz}
 
 \usetikzlibrary{shapes,arrows}
@@ -33,8 +43,8 @@
 \section{Introduction}
 Humans are able to use and reuse knowledge more flexibly than most deep learning models can \citep[e.g.][]{Lake2016}. One fundamental reason for this is the separation of knowledge within deep neural networks -- although deep networks represent knowledge about data (in their activations) and knowledge about the structure of tasks (in their parameters), they do not represent any relationships between these. That is, neural networks knowledge about \textbf{what} is being computed is \textbf{inaccessible} by the computations. By contrast, humans are frequently consciously aware of both our representations of input, the things we can do with them, and the relationships between data and tasks. This is true for domains from game playing to natural language understanding. \par
 One of the abilities that this grants humans is rapid adaptation of our behavior. The problem of rapid learning has been partially addressed by meta-learning systems. However, humans can take rapidly acquired knowledge and flexibly alter their behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance \textbf{without any retraining} (i.e. zero-shot). Deep learning systems at present lack this representational flexiblity. \par
-In this paper, we propose a new class of architectures which essentially take a \textbf{functional perspective} on meta-learning. By treating tasks as functions, we can conceptually think of both data \textbf{and} learned functions as transformable. This yields the ability to not only learn to solve new tasks, but to learn how to flexibly transform these solutions in response to changing task demands. We suggest that this ability will be key to building more intelligent and flexible deep learning systems. \par
-In particular, we propose a meta-learning architecture which embeds data (including natural language inputs) and tasks in a shared space, and meta-learns to execute mappings over this space. We demonstrate the greater flexibility of this approach.
+In this paper, we propose a new class of architectures which essentially take a \textbf{functional perspective} on meta-learning and exploit the idea of \textbf{homoiconicity}\footnote{A homoiconic programming language is one in which programs in the language can be manipulated by programs in the language just as data can.}. By treating tasks and data as functions, we can conceptually think of both data \textbf{and} learned behaviors as transformable. This yields the ability to not only learn to solve new tasks, but to learn how to flexibly transform these solutions in response to changing task demands. We suggest that this ability will be key to building more intelligent and flexible deep learning systems. \par
+In particular, we propose a meta-learning architecture which embeds data (including natural language inputs) and tasks in a shared space, and meta-learns to execute mappings over this space. We demonstrate the greater flexibility of this approach compared to other approaches. \par
 \section{Method}
 \subsection{Architecture}
 The essential idea of the architecture is that we separate the system into two parts: 
