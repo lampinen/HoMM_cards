@@ -163,7 +163,7 @@ We randomly sampled the train and test polynomials as follows:
 \item Sample the subset of $k$ variables that are relevant uniformly at random.
 \item For each term combining the relevant variables (including the intercept), include the term with probability 0.5. If so give it a random intercept drawn from $\mathcal{N}(0, 2.5)$.
 \end{enumerate}
-The data points were sampled uniformly from $[-1, 1]$ independently for each polynomial. \par
+The data points on which these polynomials were evaluated were sampled uniformly from $[-1, 1]$ independently for each variable, and for each polynomial. The datasets were resampled every 50 epochs of training. \par
 \subsubsection{Results}
 
 
