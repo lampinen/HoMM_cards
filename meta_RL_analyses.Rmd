@@ -103,24 +103,18 @@ name_var = function(var) { # var names for plotting
   }
 
 summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NULL, other_baseline_data=NULL, palette="Set2") {
-  p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +
+  p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +  
     geom_hline(yintercept=0., linetype=2, alpha=0.5) +
     geom_point(stat="summary", fun.y=mean, size=2) +
-    geom_errorbar(stat="summary", 
-                  fun.ymin=function(x) {mean(x) - 1.96*sd(x)/sqrt(length(x))},
-                  fun.ymax=function(x) {mean(x) + 1.96*sd(x)/sqrt(length(x))},
-                  width=0.25) +
-    scale_color_brewer(palette=palette) +
-    labs(x=name_var(x_var), y=name_var(y_var)) +
-    guides(color=guide_legend(title=NULL))
-    
+    scale_color_manual(values=c("#6560a3", "#f37f22")) 
+  
   if (!is.null(optimal_baseline_data)) {
     p = p + 
       annotate("segment",
                x=(1:5)-0.5, xend=(1:5)+0.5,
                y=optimal_baseline_data$expected_reward,
                yend=optimal_baseline_data$expected_reward,
-               linetype=1, alpha=0.5) 
+               linetype=1, alpha=0.33) 
   }
   
   if (!is.null(other_baseline_data)) {
@@ -130,7 +124,14 @@ summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NU
                  linetype=2, alpha=0.5,
                  position=position_nudge(x=-0.5)) 
   }
-  
+ 
+  p = p + 
+    geom_errorbar(stat="summary", 
+                  fun.data="mean_cl_boot",
+                  width=0.25) +
+#    scale_color_brewer(palette=palette) +
+    labs(x=name_var(x_var), y=name_var(y_var)) +
+    guides(color=guide_legend(title=NULL))
   
   return(p)
 }
