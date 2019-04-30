@@ -559,11 +559,11 @@ summary_plot(meta_d %>%
                       meta_task %in% c("toggle_losers", "toggle_black_valuable"))) +
   facet_wrap(. ~ named_run_type)  +
   guides(color=guide_legend(title=NULL)) +
-  labs(x="Game type", y="Average reward") +
+  labs(x="Meta task", y="Average reward") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_basic_random_meta.png", width=5, height=3.5)
-#ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
+ggsave("writing/figures/meta_mapping.png", width=5, height=3)
 ```
 
 # language-induced meta mapping (true) evaluation
@@ -581,7 +581,8 @@ lang_meta_d = lang_meta_d %>%
   gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
   mutate(is_new = check_if_new_game(run_type, source) | check_if_new_game(run_type, target),
-         is_new = factor(is_new, labels=c("Trained", "Held out")))
+         is_new = factor(is_new, labels=c("Trained", "Held out")),
+         named_meta_task=name_meta_task(meta_task))
 ```
 
 ```{r}
@@ -598,15 +599,20 @@ summary_plot(lang_meta_d %>%
 ```{r}
 summary_plot(lang_meta_d %>%
                filter(epoch == 0,
+                      meta_task %in% c("toggle_losers", "toggle_black_valuable"),
                       run_type %in% c("meta_batch_128", "language_simplified_random_holdout")),
-             "meta_task", "reward", "is_new") +
+             "named_meta_task", "reward", "is_new",
+             other_baseline_data = meta_baseline_unmapped_d %>%
+               filter(is_new == "Held out",
+                      meta_task %in% c("toggle_losers", "toggle_black_valuable"))) +
   facet_wrap(. ~ named_run_type)  +
   guides(color=guide_legend(title=NULL)) +
-  labs(x="Game type", y="Average reward") +
+  labs(x="Meta task", y="Average reward") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/language_meta.png", width=7, height=3.5)
-#ggsave("writing/figures/meta_mapping.png", width=5, height=3.5)
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/language_meta.png", width=7, height=3.5)
+ggsave("writing/figures/language_meta_mapping.png", width=5, height=3)
+
 ```
 
 # embeddings
