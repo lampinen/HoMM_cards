@@ -180,27 +180,13 @@ In this section, we demonstrate the effectiveness of this solution by training o
 
 
 \subsection{A stochastic learning setting: simple card games}
-Our next case study was in the setting of simple card games, played with two suits, and 4 values per suit. In our setup, each hand in a game has a win probability (proportional to how it ranks against all other possible hands). The agent is dealt a hand, and then has to choose to bet 0, 1, or 2. If it wins, it is rewarded the value of the bet, if it loses, it receives the negative of the value. This doesn't require long term planning, but does incorporate the stochastic feedback aspect of reinforcement learning. We considered a variety of games:
-\begin{itemize}
-\item \textbf{High card:} Highest card wins.
-\item \textbf{Pairs and high:} Same as high card, except pairs are more valuable, and same suit pairs are even more valuable.
-\item \textbf{Straight flush:} Most valuable is adjacent numbers in same suit, i.e. 4 and 3 in most valuable suit wins every time (royal flush).
-\item \textbf{Match:} the hand with cards that differ least in value (suit counts as 0.5 pt difference) wins.
-\item \textbf{Sum under:} The hand's value increases with the sum of the cards until it crosses 5, at which point the player ``goes bust,'' and the value becomes negative. 
-\end{itemize}
-These games are simplified analogs of various card games, including poker and blackjack. We also considered three binary options that could be altered to produce variants of these games:
-\begin{itemize}
-\item \textbf{Losers:} Try to lose instead of winning! Reverses the ranking of hands.
-\item \textbf{Suits rule:} Instead of suits being less important than values, they are more important (essentially flipping the role of suit and value in most games).
-\item \textbf{Switch suit:} Switches which of the suits is more valuable.
-\end{itemize}
-Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. \par
+Our next case study was in the setting of simple card games, where the agent receives a hand and has to decide on a bet. There is no action besides betting, and depending on the opponent's hand the agent either wins or loses the amount bet. If it wins, it is rewarded the value of the bet, if it loses, it loses that value (i.e. receives a negative reward). This doesn't require long term planning, but does incorporate some aspects of reinforcement learning, namely stochastic feedback on only the action chosen. We considered five games that are simplified analogs of various real card games, including poker and blackjack (see Appendix \ref{meth_data_cards} for details of the games). We also considered several binary options that could be applied to the games, including trying to lose instead of trying to win, or switching which suit was more valuable. These are challenging manipulations, for instance trying to lose requires completely inverting the learned $Q$-function for the task. \par
 In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as still a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure of the game. \par   
 We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. We can also train the system to map language to games, i.e. playing a game based on hearing its name, and then ask whether the system can generalize this to held-out games based on the systematicity of the language. For example, if trained to play ``straight flush'' but never ``losers straight flush,'' will it nevertheless be able to generalize to this case based on its experience with other games? Finally, we can use language denote meta-mappings. \par
 
 \newpage
 \subsubsection{Results}
-\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``Losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. It is worth noting that the sample complexity in terms of number of tasks trained on is not that high, even training on 20 tasks leads to good generalization. Furthermore, starting from this ``guess'' at the correct strategy, the system can rapidly learn to achieve optimal performance ($< 20$ epochs, figure TODO). \par
+\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``Losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. It is worth noting that the sample complexity in terms of number of tasks trained on is not that high, even training on 20 randomly selected tasks leads to good generalization to the held-out tasks. \par
 \begin{figure}
 \centering
 \includegraphics[width=0.5\textwidth]{figures/basic_meta_learning.png}
@@ -261,6 +247,22 @@ We can train the system to identify the various types of games and options, and 
 \subsubsection{Polynomials}
 
 \subsubsection{Card games}
+\label{meth_data_cards}
+Our card games were played with two suits, and 4 values per suit. In our setup, each hand in a game has a win probability (proportional to how it ranks against all other possible hands). The agent is dealt a hand, and then has to choose to bet 0, 1, or 2 (the three actions it has available). We considered a variety of games which depend on different features of the hand: 
+\begin{itemize}
+\item \textbf{High card:} Highest card wins.
+\item \textbf{Pairs} Same as high card, except pairs are more valuable, and same suit pairs are even more valuable.
+\item \textbf{Straight flush:} Most valuable is adjacent numbers in same suit, i.e. 4 and 3 in most valuable suit wins every time (royal flush).
+\item \textbf{Match:} the hand with cards that differ least in value (suit counts as 0.5 pt difference) wins.
+\item \textbf{Blackjack:} The hand's value increases with the sum of the cards until it crosses 5, at which point the player ``goes bust,'' and the value becomes negative. 
+\end{itemize}
+We also considered three binary options that could be altered to produce variants of these games:
+\begin{itemize}
+\item \textbf{Losers:} Try to lose instead of winning! Reverses the ranking of hands.
+\item \textbf{Suits rule:} Instead of suits being less important than values, they are more important (essentially flipping the role of suit and value in most games).
+\item \textbf{Switch suit:} Switches which of the suits is more valuable.
+\end{itemize}
+Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. The systems were trained with the full 40 possible games, but after training we discovered that the ``suits rule'' option does not substantially alter the games we chose, so we have omitted it from our analyses.\par
 
 \end{document}
 
