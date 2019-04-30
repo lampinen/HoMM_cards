@@ -41,6 +41,23 @@ name_run_type = function(run_type) { # names for plotting
             T ~ run_type)
 }
 
+name_game_type = function(game) {
+  case_when(game == "high_card" ~ "High card",
+            game == "straight_flush" ~ "Straight flush",
+            game == "match" ~ "Match",
+            game == "sum_under" ~ "Blackjack",
+            game == "pairs_and_high" ~ "Pairs",
+            T ~ game)
+}
+
+
+name_meta_task = function(meta_task) {
+  case_when(meta_task == "toggle_losers" ~ "Losers",
+            meta_task == "toggle_suits_rule" ~ "Suits > rank",
+            meta_task == "toggle_black_valuable" ~ "Switch suits",
+            T ~ meta_task)
+}
+
 new_game_strs = c("game_straight_flush_l_1_bv_0_sr_0",
                   "game_straight_flush_l_1_bv_1_sr_0",
                   "game_straight_flush_l_1_bv_0_sr_1",
@@ -95,7 +112,7 @@ theme_set(theme_bw() +
 ```{r}
 name_var = function(var) { # var names for plotting
   case_when(var %in% c("is_new", "is_new_game") ~ "Held out?",
-            var == "game_type" ~ "Game",
+            var %in% c("game_type", "named_game_type") ~ "Game",
             var %in% c("run_type", "named_run_type") ~ "Run type",
 #            var == "reward" ~ "Reward",
             grepl("reward", var) ~ "Average Reward",
@@ -103,10 +120,11 @@ name_var = function(var) { # var names for plotting
   }
 
 summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NULL, other_baseline_data=NULL, palette="Set2") {
+  
   p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +  
     geom_hline(yintercept=0., linetype=2, alpha=0.5) +
     geom_point(stat="summary", fun.y=mean, size=2) +
-    scale_color_manual(values=c("#6560a3", "#f37f22")) 
+    scale_color_manual(values=c("#555093", "#f38f22")) 
   
   if (!is.null(optimal_baseline_data)) {
     p = p + 
@@ -118,17 +136,23 @@ summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NU
   }
   
   if (!is.null(other_baseline_data)) {
+    # get rid of runs that aren't in data
+    run_types_included = data %>% pull(named_run_type) %>% unique()
+    other_baseline_data = other_baseline_data %>%
+      filter(named_run_type %in% run_types_included)
+    
     p = p + 
       geom_spoke(data=other_baseline_data,
-                 aes(x=game_type, y=expected_reward, angle=0, radius=1),
+                 aes_string(x=x_var, y="expected_reward", angle=0, radius=1),
                  linetype=2, alpha=0.5,
                  position=position_nudge(x=-0.5)) 
   }
  
   p = p + 
+    geom_point(stat="summary", fun.y=mean, size=2) +
     geom_errorbar(stat="summary", 
                   fun.data="mean_cl_boot",
-                  width=0.25) +
+                  width=0.4) +
 #    scale_color_brewer(palette=palette) +
     labs(x=name_var(x_var), y=name_var(y_var)) +
     guides(color=guide_legend(title=NULL))
@@ -153,14 +177,16 @@ baseline_data = read_csv("baseline_data.csv") %>%
   mutate(game_type = str_extract(game, "high_card|match|straight_flush|pairs_and_high|sum_under"),
          losers = grepl("l_1", game),
          black_valuable = grepl("bv_1", game),
-         suits_rule = grepl("sr_1", game))
+         suits_rule = grepl("sr_1", game),
+         named_game_type = name_game_type(game_type))
 ```
 ```{r}
 optimal_baselines = baseline_data %>% 
   filter(policy == "optimal") %>%
-  group_by(game_type) %>%
+  group_by(game_type, named_game_type) %>%
   summarize(expected_reward = mean(expected_reward)) %>%
-  ungroup()
+  ungroup() %>%
+  arrange(named_game_type)
 ```
 
 And "baselines" which show the performance using strategy from most correlated prior game
@@ -174,9 +200,12 @@ most_correlated_baselines = crossing(run_type=result_subdirs, baseline_data) %>%
   group_by(run_type, game_type, is_new_game) %>%
   summarize(expected_reward = mean(optimal_expected_reward)) %>%
   mutate(is_new_game = factor(is_new_game, levels=c(F, T), labels=c("Trained", "Held out")),
-         named_run_type = name_run_type(run_type))
+         named_run_type = name_run_type(run_type),
+         named_game_type = name_game_type(game_type))
 
 ```
+
+
 
 # meta-learning tests
 
@@ -195,14 +224,15 @@ reward_d = reward_d %>%
          black_valuable = grepl("bv_1", game_str),
          suits_rule = grepl("sr_1", game_str),
          is_new_game = check_if_new_game(run_type, game_str),
-         is_new_game = factor(is_new_game, labels=c("Trained", "Held out")))
+         is_new_game = factor(is_new_game, labels=c("Trained", "Held out")),
+         named_game_type = name_game_type(game_type))
 ```
 
 ```{r}
 avg_reward_d = reward_d %>%
   select(-game_str) %>%
   filter(epoch == 0) %>%
-  group_by(run_type, game_type, is_new_game) %>%
+  group_by(run_type, game_type, named_game_type, is_new_game) %>%
   summarize(avg_reward = mean(reward), sd_reward=sd(reward),
             se_reward = sd_reward/sqrt(n()), 
             ci_lo = avg_reward - 1.96*se_reward, 
@@ -222,7 +252,7 @@ avg_reward_d = reward_d %>%
 summary_plot(reward_d %>%
                filter(epoch == 0,
                       run_type == "basic"),
-             "game_type", "reward", "is_new_game",
+             "named_game_type", "reward", "is_new_game",
              optimal_baselines,
              most_correlated_baselines %>%
                filter(run_type == "basic",
@@ -237,7 +267,7 @@ ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic.png", width=5, hei
 summary_plot(reward_d %>%
                filter(epoch == 0,
                       run_type == "basic_random_holdout_longer"),
-             "game_type", "reward", "is_new_game",
+             "named_game_type", "reward", "is_new_game",
              optimal_baselines,
              most_correlated_baselines %>%
                filter(run_type == "basic_random_holdout_longer",
@@ -250,15 +280,16 @@ ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_random_holdout_hal
 
 ```{r}
 summary_plot(reward_d %>%
-               filter(epoch == 0),
-             "game_type", "reward", "is_new_game",
+               filter(epoch == 0,
+                      run_type %in% c("basic", "basic_random_holdout_longer")),
+             "named_game_type", "reward", "is_new_game",
              optimal_baselines,
              most_correlated_baselines %>%
                filter(is_new_game == "Held out")) +
   facet_wrap(. ~ named_run_type) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
-#ggsave("writing/figures/basic_meta_learning.png", width=5, height=3.5)
+ggsave("writing/figures/basic_meta_learning.png", width=5, height=3)
 ```
 
 ```{r}
@@ -460,6 +491,26 @@ summary_plot(joint_d %>%
 
 # meta mapping (true) evaluation
 
+
+```{r}
+meta_tasks = c("toggle_losers", "toggle_suits_rule", "toggle_black_valuable")
+meta_baseline_unmapped_d = crossing(meta_task=meta_tasks,
+                                    run_type=result_subdirs,
+                                    baseline_data) %>%
+  filter(case_when(meta_task == "toggle_losers" ~ game == gsub("l_0", "l_1", policy) | game == gsub("l_1", "l_0", policy), 
+                   meta_task == "toggle_black_valuable" ~ game == gsub("bv_0", "bv_1", policy) | game == gsub("bv_1", "bv_0", policy), 
+                   meta_task == "toggle_suits_rule" ~ game == gsub("sr_0", "sr_1", policy) | game == gsub("sr_1", "sr_0", policy), 
+                   T ~ F)) %>%
+  mutate(named_run_type = name_run_type(run_type),
+         named_meta_task = name_meta_task(meta_task),
+         is_new = check_if_new_game(run_type, game) | check_if_new_game(run_type, policy),
+         is_new = factor(is_new, labels=c("Trained", "Held out"))) %>%
+  group_by(run_type, named_run_type, meta_task, named_meta_task, is_new)  %>%
+  summarize(expected_reward = mean(expected_reward)) 
+
+```
+
+
 ```{r}
 meta_d = load_d(results_dir, result_subdirs, num_runs, "new_meta_true_losses")
 
@@ -473,14 +524,15 @@ meta_d = meta_d %>%
   gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
   mutate(is_new = check_if_new_game(run_type, source) | check_if_new_game(run_type, target),
-         is_new = factor(is_new, labels=c("Trained", "Held out")))
+         is_new = factor(is_new, labels=c("Trained", "Held out")),
+         named_meta_task = name_meta_task(meta_task))
 ```
 
 ```{r}
 avg_meta_d = meta_d %>%
-  group_by(run_type, named_run_type, run, meta_task, is_new) %>%
+  group_by(run_type, named_run_type, run, meta_task, named_meta_task, is_new) %>%
   summarize(avg_reward = mean(reward)) %>%
-  group_by(run_type, named_run_type, meta_task, is_new) %>%
+  group_by(run_type, named_run_type, meta_task, named_meta_task, is_new) %>%
   summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward),
             se_reward = sd_avg_reward/sqrt(n()), 
             ci_lo = avg_avg_reward - 1.96*se_reward, 
@@ -499,8 +551,12 @@ ggplot(avg_meta_d, aes(x=meta_task, fill=is_new, y=avg_avg_reward)) +
 ```{r}
 summary_plot(meta_d %>%
                filter(epoch == 0,
+                      meta_task %in% c("toggle_losers", "toggle_black_valuable"),
                       run_type %in% c("basic", "basic_random_holdout_longer")),
-             "meta_task", "reward", "is_new") +
+             "named_meta_task", "reward", "is_new",
+             other_baseline_data = meta_baseline_unmapped_d %>%
+               filter(is_new == "Held out",
+                      meta_task %in% c("toggle_losers", "toggle_black_valuable"))) +
   facet_wrap(. ~ named_run_type)  +
   guides(color=guide_legend(title=NULL)) +
   labs(x="Game type", y="Average reward") +
