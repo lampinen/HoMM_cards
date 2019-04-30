@@ -106,7 +106,9 @@ load_d = function(results_dir, result_subdirs, num_runs, file_type) {
 plot themes
 ```{r}
 theme_set(theme_bw() + 
-            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()))
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                  legend.margin = margin(0, 0, 0, 0), 
+                  legend.box.margin = margin(0, 0, 0, 0)))
 ```
 
 ```{r}
@@ -289,7 +291,7 @@ summary_plot(reward_d %>%
   facet_wrap(. ~ named_run_type) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
-ggsave("writing/figures/basic_meta_learning.png", width=5, height=3)
+ggsave("writing/figures/basic_meta_learning.png", width=4.2, height=3)
 ```
 
 ```{r}
@@ -563,7 +565,7 @@ summary_plot(meta_d %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/basic_basic_random_meta.png", width=5, height=3.5)
-ggsave("writing/figures/meta_mapping.png", width=5, height=3)
+ggsave("writing/figures/meta_mapping.png", width=4.2, height=3)
 ```
 
 # language-induced meta mapping (true) evaluation
@@ -600,7 +602,9 @@ summary_plot(lang_meta_d %>%
 summary_plot(lang_meta_d %>%
                filter(epoch == 0,
                       meta_task %in% c("toggle_losers", "toggle_black_valuable"),
-                      run_type %in% c("meta_batch_128", "language_simplified_random_holdout")),
+                      run_type %in% c("meta_batch_128", "language_simplified_random_holdout")) %>%
+               mutate(named_run_type = factor(named_run_type, labels=c("Random 50% holdout", "Targeted 10% holdout"))),
+           
              "named_meta_task", "reward", "is_new",
              other_baseline_data = meta_baseline_unmapped_d %>%
                filter(is_new == "Held out",
@@ -611,7 +615,7 @@ summary_plot(lang_meta_d %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/language_meta.png", width=7, height=3.5)
-ggsave("writing/figures/language_meta_mapping.png", width=5, height=3)
+ggsave("writing/figures/language_meta_mapping.png", width=4.2, height=3)
 
 ```
 
