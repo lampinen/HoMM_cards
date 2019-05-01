@@ -121,7 +121,7 @@ name_var = function(var) { # var names for plotting
             T ~ var)
   }
 
-summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NULL, other_baseline_data=NULL, palette="Set2") {
+summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NULL, other_baseline_data=NULL, palette="Set2", continuous_x=F) {
   
   p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +  
     geom_hline(yintercept=0., linetype=2, alpha=0.5) +
@@ -150,6 +150,11 @@ summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NU
                  position=position_nudge(x=-0.5)) 
   }
  
+  if (continuous_x) {
+    p = p + 
+      geom_line(stat="summary", fun.y=mean, size=2) 
+  }
+  
   p = p + 
     geom_point(stat="summary", fun.y=mean, size=2) +
     geom_errorbar(stat="summary", 
@@ -292,6 +297,17 @@ summary_plot(reward_d %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
 ggsave("writing/figures/basic_meta_learning.png", width=4.2, height=3)
+```
+
+```{r}
+summary_plot(reward_d %>%
+               filter(run_type %in% c("basic", "basic_random_holdout_longer", "meta_batch_128", "language_simplified_random_holdout")),
+             "epoch", "reward", "is_new_game",
+             continuous_x=T) +
+  facet_wrap(. ~ named_run_type) +
+  geom_smooth(method="lm")
+  
+#ggsave("writing/figures/basic_meta_learning_integrating_over_time.png", width=4.2, height=3)
 ```
 
 ```{r}
@@ -620,10 +636,15 @@ ggsave("writing/figures/language_meta_mapping.png", width=4.2, height=3)
 ```
 
 # embeddings
+```{r}
+library(tsne)
+```
 
 ```{r}
-for (result_subdir in result_subdirs) {
-  for (emb_type in c("guess", "final")) {
+#for (result_subdir in result_subdirs) {
+#  for (emb_type in c("guess", "final")) {
+for (result_subdir in c("basic")) {
+  for (emb_type in c("final")) {
     emb_d = data.frame()
     for (run_i in 0:(num_runs-1)) {
       filename = sprintf("%s%s/run%i_%s_embeddings.csv", results_dir, result_subdir, run_i, emb_type)
@@ -635,16 +656,46 @@ for (result_subdir in result_subdirs) {
       emb_d = bind_rows(emb_d, this_d)
     }
     
+    set.seed(0) # reproducible tsne
     pcs = prcomp(emb_d %>% select(-dimension, -run, -starts_with("is"), -starts_with("toggle")), center=T, scale=T)
     pc_d = data.frame(pcs$rotation)
     pc_d$task = row.names(pc_d)
-    ggplot(pc_d, aes(x=PC1, y=PC2, color=task)) +
+    pc_d = pc_d %>% 
+      mutate(game_type = str_extract(task, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+             losers = grepl("l_1", task),
+             black_valuable = grepl("bv_1", task),
+             suits_rule = grepl("sr_1", task),
+             named_game_type = name_game_type(game_type))
+    ggplot(pc_d, aes(x=PC1, y=PC2, shape=named_game_type, color=losers, size=black_valuable)) +
       geom_point() +
-      geom_text(aes(label=task)) +
-      guides(color=F)
+      scale_color_brewer(palette="Dark2") + 
+      labs(x="Dimension 1", y="Dimension 2") +
+      guides(size=guide_legend(title="Switch suits"),
+             shape=guide_legend(title="Game"),
+             color=guide_legend(title="Losers"))
     ggsave(sprintf("plots/%s_PCA_basic_%s.png", result_subdir, emb_type), width=7, height=7)
     
-    pcs = prcomp(emb_d %>% select(-dimension, -run), center=T, scale=T)
+    ts = data.frame(tsne(emb_d %>% select(-dimension, -run, -starts_with("is"), -starts_with("toggle")) %>% as.matrix() %>% t(),
+                         perplexity=5,
+                         initial_dims=10))
+    ts$task = pc_d$task
+    ts = ts %>% 
+      mutate(game_type = str_extract(task, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+             losers = grepl("l_1", task),
+             black_valuable = grepl("bv_1", task),
+             suits_rule = grepl("sr_1", task),
+             named_game_type = name_game_type(game_type))
+    ggplot(ts, aes(x=X1, y=X2, shape=named_game_type, color=losers, size=black_valuable)) +
+      geom_point() + 
+      scale_color_brewer(palette="Dark2") + 
+      labs(x="Dimension 1", y="Dimension 2") +
+      guides(size=guide_legend(title="Switch suits"),
+             shape=guide_legend(title="Game"),
+             color=guide_legend(title="Losers"))
+    ggsave(sprintf("plots/%s_tsne_basic_%s.png", result_subdir, emb_type), width=7, height=7)
+    
+    set.seed(0) # reproducible tsne
+    pcs = prcomp(emb_d %>% select(-dimension, -run, -contains("suits_rule")), center=T, scale=T)
     pc_d = data.frame(pcs$rotation)
     pc_d$task = row.names(pc_d)
     ggplot(pc_d, aes(x=PC1, y=PC2, color=task)) +
@@ -652,6 +703,36 @@ for (result_subdir in result_subdirs) {
       geom_text(aes(label=task)) +
       guides(color=F)
     ggsave(sprintf("plots/%s_PCA_full_%s.png", result_subdir, emb_type), width=7, height=7)
+
+    ts = data.frame(tsne(emb_d %>% select(-dimension, -run, -contains("suits_rule")) %>% as.matrix() %>% t(),
+                         perplexity=5,
+                         initial_dims=10))
+    ts$task = row.names(pc_d)
+    ts = ts %>%
+      mutate(is_meta = grepl("is_|toggle_", task),
+             meta_type = ifelse(is_meta, str_extract(task, "toggle|is"), NA),
+             game_type = str_extract(task, "high_card|match|straight_flush|pairs_and_high|sum_under"),
+             losers = grepl("l_1", task),
+             black_valuable = grepl("bv_1", task),
+             suits_rule = grepl("sr_1", task),
+             named_game_type = name_game_type(game_type),
+             type_var = ifelse(is_meta, task, "basic"),
+             type_var = factor(type_var,
+                               levels=c('basic', 'is_high_card', 'is_straight_flush', 'is_match', 'is_pairs_and_high', 'is_sum_under', 'is_suits_rule', 'is_losers', 'is_black_valuable', 'toggle_suits_rule', 'toggle_losers', 'toggle_black_valuable'),
+                               labels=c('Basic', 'is_high_card', 'is_poker', 'is_match', 'is_pairs', 'is_blackjack', 'is_suits_rule', 'is_losers', 'is_switched_suits', 'toggle_suits_rule', 'toggle_losers', 'toggle_switch_suits'))
+             )
+    ggplot(ts, aes(x=X1, y=X2, color=type_var, alpha=is_meta)) +
+      geom_point() +
+      geom_text(data=ts %>% filter(is_meta),
+                aes(label=type_var),
+                position=position_nudge(y=40, x=-100),
+                size=4) +
+      scale_alpha_manual(values=c(0.33, 1)) + 
+      scale_color_brewer(palette="Set3") + 
+      labs(x="Dimension 1", y="Dimension 2") +
+      guides(alpha=F,
+             color=guide_legend(title="Task"))
+    ggsave(sprintf("plots/%s_tsne_full_%s.png", result_subdir, emb_type), width=7, height=6)
   }
 }
 ```
