@@ -4,7 +4,7 @@
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
-\usepackage{hyperref}       % hyperlinks
+\usepackage[pdfborder={0 0 0}]{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
@@ -157,13 +157,6 @@ Similarly, we could map from language to a task embedding, and then ask how well
 \subsection{Learning multivariate polynomials}
 As a proof of concept, we first evaluated the system on the simple task of learning polynomials in 4 variables of degree $\leq 2$ (i.e. the task was to learn functions of the form $f: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $f \in \mathcal{P}_2 \left(\mathbb{R}\right)$). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying a polynomial by a constant, squaring a polynomial, or permuting its input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. \par
 %% TODO: appendix
-We randomly sampled the train and test polynomials as follows:
-\begin{enumerate}
-\item Sample the number of relevant variables ($k$) uniformly at random from 0 (i.e. a constant) to the total number of variables.
-\item Sample the subset of $k$ variables that are relevant uniformly at random.
-\item For each term combining the relevant variables (including the intercept), include the term with probability 0.5. If so give it a random intercept drawn from $\mathcal{N}(0, 2.5)$.
-\end{enumerate}
-The data points on which these polynomials were evaluated were sampled uniformly from $[-1, 1]$ independently for each variable, and for each polynomial. The datasets were resampled every 50 epochs of training. \par
 
 \subsubsection{Results}
 
@@ -244,7 +237,14 @@ We can train the system to identify the various types of games and options, and 
 
 \section{Detailed methods}
 \subsection{Datasets}
-\subsubsection{Polynomials}
+\subsubsection{Polynomials} \label{meth_data_poly}
+We randomly sampled the train and test polynomials as follows:
+\begin{enumerate}
+\item Sample the number of relevant variables ($k$) uniformly at random from 0 (i.e. a constant) to the total number of variables.
+\item Sample the subset of $k$ variables that are relevant from all the variables.
+\item For each term combining the relevant variables (including the intercept), include the term with probability 0.5. If so give it a random coefficient drawn from $\mathcal{N}(0, 2.5)$.
+\end{enumerate}
+The data points on which these polynomials were evaluated were sampled uniformly from $[-1, 1]$ independently for each variable, and for each polynomial. The datasets were resampled every 50 epochs of training. \par
 
 \subsubsection{Card games}
 \label{meth_data_cards}
@@ -264,5 +264,22 @@ We also considered three binary options that could be altered to produce variant
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. The systems were trained with the full 40 possible games, but after training we discovered that the ``suits rule'' option does not substantially alter the games we chose, so we have omitted it from our analyses.\par
 
+
+\section{Card game $t$-SNE} \label{app_cards_tsne}
+We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/basic_tsne_basic_final.png}
+\caption{$t$-SNE embedding of the function embeddings the system learned for the basic card game tasks. (Note that the pairs of nearby embeddings differ in the ``suits rule`` attribute, discussed in appendix \ref{meth_data_cards}.)} 
+\label{fig_cards_tsne_basic}
+\end{figure}%
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/basic_tsne_full_final.png}
+\caption{$t$-SNE embedding of the function embeddings the system learned for the meta tasks (basic tasks are included in the background).} 
+\label{fig_cards_tsne_full}
+\end{figure}
+
 \end{document}
+
 
