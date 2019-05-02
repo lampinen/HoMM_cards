@@ -138,13 +138,13 @@ A basic forward pass through the system might look as follows.
 \item The output embeddings are decoded by $\mathcal{O}$ to produce a set of outputs.
 \end{enumerate}
 To write this explicitly, suppose we have some dataset of input, target pairs ($D_1 = \{(x_0, y_0), ...\}$), and some input $x$ for which we wish to generate a predicted output $\hat{y}$. This output would be generated as follows: 
-$$\hat{y} = \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)$$
+\[\hat{y} = \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\]
 where $f_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
-$$f_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_0\right), \mathcal{T}\left(y_0\right) \right), \left(\mathcal{I}\left(x_1\right), \mathcal{T}\left(y_1\right) \right), ... \right\}\right)\right)$$
+\[f_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_0\right), \mathcal{T}\left(y_0\right) \right), \left(\mathcal{I}\left(x_1\right), \mathcal{T}\left(y_1\right) \right), ... \right\}\right)\right)\]
 This system can be trained end-to-end if labels are provided for a second set of inputs. In particular, suppose we have some loss function $\mathcal{L}(y, \hat{y})$ defined on a single target output $y$ and actual model output $\hat{y}$, for some input $x$. We define our total loss computed on some dataset $D_2$ as:
-$$\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathcal{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]$$
+\[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathcal{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
 More generally, suppose we have some input which is already embedded in the representation space $z_{in} \in Z$, and an embedded dataset $D_Z$ of (embedding, target embedding) pairs $\{(z_{in,0}, z_{out,0})\}$. Then we can generate an output $\hat{z}_{out} \in Z$ as:  
-$$\hat{z}_{out} = f_{D_Z}(z_{in}) \qquad \text{where } f_{D_Z} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left(D_Z\right)\right)$$
+\[\hat{z}_{out} = f_{D_Z}(z_{in}) \qquad \text{where } f_{D_Z} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left(D_Z\right)\right)\]
 This output can then be appropriately dispatched depending on the task at hand. For example, if the $z_{in,i}$ are the system's embeddings for trying to win various games, and the $z_{out,i}$ are the corresponding embeddings for trying to lose those games, then $z_{out}$ could be interpreted as the system's guess at a losing strategy for the game embedded as $z_{in}$, and then could be used to play that game. We could then evaluate performance by how well the system actually performs at losing with the $z_{out}$ strategy. \par
 Similarly, we could map from language to a task embedding, and then ask how well the system performs at the task specified by language. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows substantial flexibility within a unified system. 
 
@@ -158,28 +158,28 @@ Similarly, we could map from language to a task embedding, and then ask how well
 As a proof of concept, we first evaluated the system on the simple task of learning polynomials in 4 variables of degree $\leq 2$ (i.e. the task was to learn functions of the form $f: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $f \in \mathcal{P}_2 \left(\mathbb{R}\right)$). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying a polynomial by a constant, squaring a polynomial, or permuting its input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. \par
 %% TODO: appendix
 
-\subsubsection{Results}
 
 
 
 \subsection{Continual learning}
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{figures/continual/continual_learning.png}
+\caption{Once the meta-learning system has been trained on a distribution of prior tasks, its performance on new tasks can be tuned by caching its guessed embeddings for the tasks and then optimizing those, thus avoiding any possibility of interfering with performance on prior tasks. Starting from random embeddings in the trained model results in slower convergence, while in an untrained model the embeddings cannot be optimized well.}
+\label{poly_continual_results}
+\end{figure}
 Although the meta-learning approach is effective for rapidly adapting to a new task, it is unreasonable to think that our system must consider every example of a task it has seen at each inference step. We would like to be able to store our knowledge about the tasks in a way that allows it to be more carefully refined. Furthermore, we would like the system to be able to adapt to new tasks (that it cannot perfectly solve from examples) without catastrophically interfering with our prior knowledge \citep{McCloskey1989}. \par
 A very simple solution to these problems is naturally suggested by our architecture. Specifically, task embeddings can be cached so that they don't have to be regenerated at each inference step. This also allows the potential to optimize these embeddings without altering the other parameters in the architecture, thus allowing fine-tuning on a task without seeing more examples, and without interfering with performance on any other task. That is, we can see the meta-learning step as a ``warm start'' for an optimization procedure over embeddings that are cached in memory \citep[c.f.][]{Kumaran2016}.\footnote{Note that the weights generated by the hyper network could be cached instead of the embeddings, which would be much more memory intensive but would allow even better tuning and would not require passing through the hyper network at inference time.} \par 
-In this section, we demonstrate the effectiveness of this solution by training on new tasks by starting from the meta-learning network's ``guess'' at the correct task embedding, and then optimizing this embedding without altering the other parameters. We show that this yields very good results if the model has been pre-trained on a sufficient distribution of tasks. \par 
-%% TODO: Baselines and the fact that something interesting is being learned 
+To test this idea, we pre-trained the system on 100 polynomial tasks, and then introduced 100 new tasks. We trained on these new tasks by starting from the meta-learning network's ``guess'' at the correct task embedding, and then optimizing this embedding without altering the other parameters. The results are shown in fig. \ref{poly_continual_results}. The meta-network embeddings offers good immediate performance, and substantially accelerates the optimization the process, compared to a randomly-initialized embedding. Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network. \par 
 
 
-\subsubsection{Results}
 
 
 \subsection{A stochastic learning setting: simple card games}
 Our next case study was in the setting of simple card games, where the agent receives a hand and has to decide on a bet. There is no action besides betting, and depending on the opponent's hand the agent either wins or loses the amount bet. If it wins, it is rewarded the value of the bet, if it loses, it loses that value (i.e. receives a negative reward). This doesn't require long term planning, but does incorporate some aspects of reinforcement learning, namely stochastic feedback on only the action chosen. We considered five games that are simplified analogs of various real card games, including poker and blackjack (see Appendix \ref{meth_data_cards} for details of the games). We also considered several binary options that could be applied to the games, including trying to lose instead of trying to win, or switching which suit was more valuable. These are challenging manipulations, for instance trying to lose requires completely inverting the learned $Q$-function for the task. \par
-In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as still a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure of the game. \par   
+In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure and stochasticity of the game. \par   
 We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. We can also train the system to map language to games, i.e. playing a game based on hearing its name, and then ask whether the system can generalize this to held-out games based on the systematicity of the language. For example, if trained to play ``straight flush'' but never ``losers straight flush,'' will it nevertheless be able to generalize to this case based on its experience with other games? Finally, we can use language denote meta-mappings. \par
-
-\newpage
-\subsubsection{Results}
-\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``Losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. It is worth noting that the sample complexity in terms of number of tasks trained on is not that high, even training on 20 randomly selected tasks leads to good generalization to the held-out tasks. \par
+\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``Losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. It is worth noting that the sample complexity in terms of number of tasks trained on is not that high, even training on 20 randomly selected tasks leads to good generalization to the held-out tasks. Furthermore, the task embeddings generated by the system are organized by the features of the games, see appendix \ref{app_cards_tsne}.\par
 \begin{figure}
 \centering
 \includegraphics[width=0.5\textwidth]{figures/basic_meta_learning.png}
@@ -202,7 +202,6 @@ We can train the system to identify the various types of games and options, and 
 \caption{The system generalizes to meta-mapping new tasks. The system is trained to do the meta-mappings shown here on a subset of its basic tasks, and is able to generalize these mappings to novel tasks it has not been trained on. For example, for the ``losers'' mapping, the sytem is trained to map games to their losers variants. When given a novel game, it is able to apply this mapping to guess how to play the losers variation. This plot shows the reward produced by taking the mapped embedding and playing the targeted game. The gray dashed line indicates random performance, while the colored dashed lines indicate performance if the system did not alter its behavior in response to the meta-mapping. The system generally exceeds these baselines by a wide margin, although the switch-suits baseline is more difficult with the targeted holdout. Furthermore, the system is able to execute these mappings either from examples (\subref{cards_meta_map_results_examples}) or from language cues (\subref{cards_meta_map_results_language}).}
 \label{cards_meta_map_results}
 \end{figure}
-\newpage
 %\textbf{Basic language (language $\rightarrow$ task):} Next, we show that the system is able to perform a held-out task based on a linguistic description alone. The system is significantly better than chance at this task, as shown in Fig. \ref{cards_language_basic_results}, but it is substantially less successful at this task than at learning from examples. This is perhaps unsurprising, however, since examples contain richer information about the structure of the task. (Note that the targeted 10\% was run using an older version of the code. Results may improve slightly when it is re-run, but based on the random 50\% hold-out results, the change doesn't make too substantial a difference.)\par
 %Intriguingly, the system also shows more run-to-run variability in its generalization from language, especially with a targeted hold-out. This suggests that language learning in this context may be quite sensitive to initialization, possibily because of the poverty of the signal relative to the capacity of the network. Interestingly, simply applying dropout does not seem to ameliorate this. \par
 %\begin{figure}[H]
@@ -226,6 +225,15 @@ We can train the system to identify the various types of games and options, and 
 %\caption{The system generalizes to meta-mapping new tasks based on language. It performs this comparably to meta-mapping based on examples of mappings.}
 %\label{cards_language_meta_results}
 %\end{figure}
+\section{Related work}
+
+Our work builds directly off of prior work on HyperNetworks \citep{Ha2016} -- networks which parameterize other networks -- as well as work on different time-scales of weight adaptation \citep{Hinton1982, Ba2016}. 
+
+Other authors have proposed using a hyper network to guess parameters for a model to accelerate model search \citep[e.g.][]{Brock2018a}.
+
+In simultaneous work \citet{Achille2019} proposed computing embeddings for tasks from the Fisher information of the parameters in a model tuned (final layer only) on the task. They show that this captures some interesting properties of the tasks, including some types of semantic relationships, and can help identify models that can perform well on a task.Other recent work has suggested a similar meta-learning framework where latent codes are computed for a task which can be decoded to a distribution over parameters. Our perspective can be seen as a generalization of these that learns task embeddings in an end-to-end way, allows parameterizing a model, and also allows for remapping of behavior by meta-tasks.
+
+
 
 \section{Discussion}
 
@@ -269,7 +277,7 @@ Any combination of these options can be applied to any of the 5 games, yielding 
 We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/basic_tsne_basic_final.png}
+\includegraphics[width=0.8\textwidth]{figures/basic_tsne_basic_final.png}
 \caption{$t$-SNE embedding of the function embeddings the system learned for the basic card game tasks. (Note that the pairs of nearby embeddings differ in the ``suits rule`` attribute, discussed in appendix \ref{meth_data_cards}.)} 
 \label{fig_cards_tsne_basic}
 \end{figure}%
@@ -278,6 +286,15 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \includegraphics[width=0.9\textwidth]{figures/basic_tsne_full_final.png}
 \caption{$t$-SNE embedding of the function embeddings the system learned for the meta tasks (basic tasks are included in the background).} 
 \label{fig_cards_tsne_full}
+\end{figure}
+
+
+\section{Supplemental figures}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\textwidth]{figures/continual/continual_learning_direct_comparison.png}
+\caption{Once the meta-learning system has been trained on a distribution of prior tasks, its performance on new tasks can be tuned by caching its guessed embeddings for the tasks and then optimizing those, thus avoiding any possibility of interfering with performance on prior tasks. Starting with the guessed embedding substantially speeds-up the process compared to a randomly-initialized embedding. Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network.}
+\label{supp_poly_continual_results}
 \end{figure}
 
 \end{document}
