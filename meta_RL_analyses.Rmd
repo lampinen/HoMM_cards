@@ -12,8 +12,8 @@ num_runs = 10
 results_dir = "results/paper_results/"
 
 result_subdirs = c(# "nometa",# "nometa_su_heldout", "nometa_random_holdout_longer", "nometa_only_one",  "nometa_only_one_ho",
-                   "basic", #"basic_su_heldout", 
-                   "basic_random_holdout_longer") # "basic_only_one", "basic_only_one_ho")
+                   "basic", "basic_slower_integration", #"basic_su_heldout", 
+                   "basic_random_holdout_longer", "basic_random_holdout_longer_slower_integration") # "basic_only_one", "basic_only_one_ho")
                    
 language_result_subdirs = c(                  
   "meta_batch_64", "meta_batch_128", "meta_batch_256",
@@ -34,6 +34,8 @@ result_subdirs = c(result_subdirs, language_result_subdirs, joint_result_subdirs
 name_run_type = function(run_type) { # names for plotting
   case_when(run_type == "basic" ~ "Targeted 10% holdout",
             run_type == "basic_random_holdout_longer" ~ "Random 50% holdout",
+            run_type == "basic_slower_integration" ~ "Targeted 10% holdout",
+            run_type == "basic_random_holdout_longer_slower_integration" ~ "Random 50% holdout",
             run_type == "language_noncompositional_old" ~ "Old language (targeted 10%)",
             run_type == "language_simplified" ~ "Old language (targeted 10%)",
             run_type == "meta_batch_128" ~ "Language (targeted 10%)",
@@ -152,7 +154,7 @@ summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NU
  
   if (continuous_x) {
     p = p + 
-      geom_line(stat="summary", fun.y=mean, size=2) 
+      geom_line(stat="summary", fun.y=mean, size=1.5) 
   }
   
   p = p + 
@@ -301,13 +303,17 @@ ggsave("writing/figures/basic_meta_learning.png", width=4.2, height=3)
 
 ```{r}
 summary_plot(reward_d %>%
-               filter(run_type %in% c("basic", "basic_random_holdout_longer", "meta_batch_128", "language_simplified_random_holdout")),
+               filter(run_type %in% c("basic_slower_integration", "basic_random_holdout_longer_slower_integration"),
+                      epoch <= 200),
              "epoch", "reward", "is_new_game",
              continuous_x=T) +
   facet_wrap(. ~ named_run_type) +
-  geom_smooth(method="lm")
+  geom_hline(yintercept=mean(optimal_baselines$expected_reward),
+             alpha=0.5) +
+  labs(x = "Epoch after introducing new tasks") +
+  theme(plot.margin=margin(b=1, units="cm"))
   
-#ggsave("writing/figures/basic_meta_learning_integrating_over_time.png", width=4.2, height=3)
+ggsave("writing/figures/basic_meta_learning_integrating_over_time.png", width=4.2, height=3)
 ```
 
 ```{r}
@@ -656,7 +662,7 @@ for (result_subdir in c("basic")) {
       emb_d = bind_rows(emb_d, this_d)
     }
     
-    set.seed(0) # reproducible tsne
+    set.seed(0) # reproducible tsne even if result_subdirs change
     pcs = prcomp(emb_d %>% select(-dimension, -run, -starts_with("is"), -starts_with("toggle")), center=T, scale=T)
     pc_d = data.frame(pcs$rotation)
     pc_d$task = row.names(pc_d)
@@ -692,9 +698,8 @@ for (result_subdir in c("basic")) {
       guides(size=guide_legend(title="Switch suits"),
              shape=guide_legend(title="Game"),
              color=guide_legend(title="Losers"))
-    ggsave(sprintf("plots/%s_tsne_basic_%s.png", result_subdir, emb_type), width=7, height=7)
+    ggsave(sprintf("plots/%s_tsne_basic_%s.png", result_subdir, emb_type), width=6, height=4.5)
     
-    set.seed(0) # reproducible tsne
     pcs = prcomp(emb_d %>% select(-dimension, -run, -contains("suits_rule")), center=T, scale=T)
     pc_d = data.frame(pcs$rotation)
     pc_d$task = row.names(pc_d)
@@ -702,10 +707,10 @@ for (result_subdir in c("basic")) {
       geom_point() +
       geom_text(aes(label=task)) +
       guides(color=F)
-    ggsave(sprintf("plots/%s_PCA_full_%s.png", result_subdir, emb_type), width=7, height=7)
+    ggsave(sprintf("plots/%s_PCA_full_%s.png", result_subdir, emb_type), width=8, height=6)
 
     ts = data.frame(tsne(emb_d %>% select(-dimension, -run, -contains("suits_rule")) %>% as.matrix() %>% t(),
-                         perplexity=5,
+                         perplexity=4,
                          initial_dims=10))
     ts$task = row.names(pc_d)
     ts = ts %>%
@@ -732,8 +737,8 @@ for (result_subdir in c("basic")) {
       labs(x="Dimension 1", y="Dimension 2") +
       guides(alpha=F,
              color=guide_legend(title="Task"))
-    ggsave(sprintf("plots/%s_tsne_full_%s.png", result_subdir, emb_type), width=7, height=6)
-  }
+    ggsave(sprintf("plots/%s_tsne_full_%s.png", result_subdir, emb_type), width=6, height=4)
+    }
 }
 ```
 
