@@ -34,6 +34,8 @@
 \setlength{\parskip}{1em}
 \setlength{\parindent}{0em}
 
+\setcitestyle{square}
+
 \begin{document}
 \title{Embedded Meta-Learning: Toward more flexible deep-learning models}
 \author{Andrew K. Lampinen}
@@ -42,7 +44,7 @@
 
 \section{Introduction}
 Humans are able to use and reuse knowledge more flexibly than most deep learning models can \citep[e.g.][]{Lake2016}. One fundamental reason for this is that humans are aware of what we are trying to compute and why. By contrasts, there is a fundamental separation of knowledge within most deep neural networks -- although deep networks represent knowledge about data (in their activations) and knowledge about the structure of tasks (in their parameters), they do not represent any relationships between data and tasks. That is, neural networks knowledge about what is being computed is only implicitly accessible to those computations. \par
-There are a number of advantages to representing knowledge about data and tasks. In particular, it can grant the ability to rapidly adapt behavior to a new task. The problem of rapid learning has been partially addressed by meta-learning systems \citep{?????}. However, humans can take our knowledge and flexibly alter our behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance without any retraining (i.e. zero-shot). Deep learning systems at present generally lack this representational flexiblity. \par
+There are a number of advantages to representing knowledge about data and tasks. In particular, it can grant the ability to rapidly adapt behavior to a new task. The problem of rapid learning has been partially addressed by meta-learning systems \citep[e.g.][]{Vinyals2016, Finn2017a}. However, humans can take our knowledge and flexibly alter our behavior in accordance with a change in task demands or a single instruction. For example, once we learn to play a game, we can immediately switch to playing in order to lose, and can achieve reasonable performance without any retraining (i.e. zero-shot). Deep learning systems at present generally lack this representational flexiblity. \par
 In this paper, we propose a new class of architectures which essentially take a functional perspective on meta-learning and exploit the idea of homoiconicity\footnote{A homoiconic programming language is one in which programs in the language can be manipulated by programs in the language, just as data can.}. By treating tasks and data as functions, we can conceptually think of both data \emph{and} learned behaviors as transformable. This yields the ability to not only learn to solve new tasks, but to learn how to flexibly transform these solutions in response to changing task demands. We suggest that this ability will be key to building more intelligent and flexible deep learning systems. \par
 In particular, we propose a meta-learning architecture which embeds data (including natural language inputs) and tasks in a shared space, and meta-learns to execute mappings over this space. We demonstrate that this approach allows flexible remapping of behavior, as well as offering other benefits such as a useful framework for continual learning. \par
 \section{Method}
@@ -162,15 +164,15 @@ Similarly, we could map from language to a task embedding, and then ask how well
 
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{figures/poly/meta_results.png}
-\caption{The system generalizes to meta-mapping new tasks. The solid line indicates optimal performance.} 
+\includegraphics[width=0.75\textwidth]{figures/poly/meta_results.png}
+\caption{The system generalizes to apply learned meta-mappings to new tasks, and to apply unlearned meta-mappings from seeing examples. The solid line indicates optimal performance.} 
 \label{poly_meta_map_results}
 \end{figure}
 As a proof of concept, we first evaluated the system on the simple task of learning polynomials in 4 variables of degree $\leq 2$ (i.e. the task was to learn functions of the form $f: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $f \in \mathcal{P}_2 \left(\mathbb{R}\right)$). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying a polynomial by a constant, squaring a polynomial, or permuting its input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. \par
 
 \textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{poly_basic_results}. \par 
 
-\textbf{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. \par 
+\textbf{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application. \par 
 
 
 \subsection{Continual learning}
@@ -236,12 +238,24 @@ We can train the system to identify the various types of games and options, and 
 %\label{cards_language_meta_results}
 %\end{figure}
 \section{Related work}
-Our work is an extrapolation from the rapidly-growing literature on meta-learning \citep[e.g.][]{Vinyals2016, Santoro2016, Finn2017a, Finn2018, Stadie2018} and continual learning, or more generally tools for avoiding catastrophic interference based on architectural innovations \citep[e.g.][]{Fernando2017, Rusu2016}, regularization terms \citep[e.g.][]{Kirkpatrick2016, Zenke2017} or external memory \citep[e.g.][]{Sprechmann2018}. There has also been interesting recent work on hybrid approaches, such as meta-learning in an online setting \citep{Finn2019}. Our work is specifically inspired by the algorithms that attempt to have the system learn to adapt to a new task via activations rather than gradient descent \citep[e.g.][]{Wang2016a, Duan2016}. \par
-Our architecture builds directly off of prior work on HyperNetworks \citep{Ha2016} -- networks which parameterize other networks -- and other recent applications of it, such as guessing parameters for a model to accelerate model search \citep[e.g.][]{Brock2018a}. This is related to the longer history of work on different time-scales of weight adaptation \citep{Hinton1982} that has more recently been applied to meta-learning contexts \citep[e.g.][]{Ba2016, Munkhdalai2017}. It is more abstractly related to work on learning to propose architectures \citep[e.g.][]{Zoph2016}, and to models that learn to select and compose skills to apply to new tasks \citep[e.g.][]{Andreas, Andreas2016, Tessler2016, Reed2015}. \par 
-There has also been some recent interest in task (or function) embeddings. In simultaneous work \citet{Achille2019} proposed computing embeddings for tasks from the Fisher information of the parameters in a model tuned (final layer only) on the task. They show that this captures some interesting properties of the tasks, including some types of semantic relationships, and can help identify models that can perform well on a task. Other recent work has suggested a similar meta-learning framework where latent codes are computed for a task which can be decoded to a distribution over parameters \citep{Rusu2019}. Our perspective can be seen as a generalization of these that learns task embeddings in an end-to-end way, allows parameterizing a model (while some approaches only allow selection), but most importantly allows for remapping of behavior by meta-tasks. \par
+Our work is an extrapolation from the rapidly-growing literature on meta-learning \citep[e.g.][]{Vinyals2016, Santoro2016, Finn2017a, Finn2018, Stadie2018}. It is also related to the literature on continual learning, or more generally tools for avoiding catastrophic interference based on architectural innovations \citep[e.g.][]{Fernando2017, Rusu2016}, regularization terms \citep[e.g.][]{Kirkpatrick2016, Zenke2017} or external memory \citep[e.g.][]{Sprechmann2018}. Recent work has also begun to blur the separation between these approaches, for example by meta-learning in an online setting \citep{Finn2019}. Our work is specifically inspired by the algorithms that attempt to have the system learn to adapt to a new task via activations rather than gradient descent \citep[e.g.][]{Wang2016a, Duan2016}. \par
+Our architecture builds directly off of prior work on HyperNetworks \citep{Ha2016} -- networks which parameterize other networks -- and other recent applications thereof, such as guessing parameters for a model to accelerate model search \citep[e.g.][]{Brock2018a}. This is related to the longer history of work on different time-scales of weight adaptation \citep{Hinton1982} that has more recently been applied to meta-learning contexts \citep[e.g.][]{Ba2016, Munkhdalai2017}. It is more abstractly related to work on learning to propose architectures \citep[e.g.][]{Zoph2016}, and to models that learn to select and compose skills to apply to new tasks \citep[e.g.][]{Andreas, Andreas2016, Tessler2016, Reed2015}. \par 
+There has also been some recent interest in task (or function) embeddings. In simultaneous work Achille et al. \citep{Achille2019} proposed computing embeddings for tasks from the Fisher information of the parameters in a model tuned (final layer only) on the task. They show that this captures some interesting properties of the tasks, including some types of semantic relationships, and can help identify models that can perform well on a task. Other recent work has suggested a similar meta-learning framework where latent codes are computed for a task which can be decoded to a distribution over parameters \citep{Rusu2019}. Our perspective can be seen as a generalization of these that learns task embeddings in an end-to-end way, allows parameterizing a model (while some approaches only allow selection), but most importantly allows for remapping of behavior by meta-tasks. \par
 \section{Discussion}
 
-We see our proposal as a logical progression from the fundamental idea of meta-learning -- that there is a continuum between data and tasks. This naturally suggests the idea of manipulating task representations just like we manipulate data.
+* We've suggested that the separation of computations from knowledge of what is being computed in neural networks is limiting.
+
+* We've suggested that the solution to this problem is the explicit representation of task alongside the computation.
+
+* We've proposed a new type of generalization challenge?
+
+* We see our proposal as a logical progression from the fundamental idea of meta-learning -- that there is a continuum between data and tasks. This naturally suggests the idea of manipulating task representations just like we manipulate data.
+
+* We've proposed an architecture which represents data and tasks within the same latent space, and have demonstrated its flexibility.
+
+* We've also shown that our approach provides a useful perspective on continual learning.
+
+* We hope that these results will lead to the development of more powerful and flexible deep-learning models.
 
 \bibliographystyle{acm}
 \bibliography{arrr}
