@@ -49,7 +49,7 @@ In particular, we propose a meta-learning architecture which embeds data (includ
 \subsection{Architecture}
 The essential idea of the architecture is that we separate the system into two parts: 
 \begin{enumerate}
-\item Domain specific encoders and decoders (vision, language, etc.) that map into a shared embedding space $Z$
+\item Domain specific encoders and decoders (vision, language, etc.) that map into a shared embedding space $Z$.
 \item A meta-learning system which:
     \begin{enumerate}
     \item Embeds tasks into the shared embedding space $Z$.
@@ -58,7 +58,6 @@ The essential idea of the architecture is that we separate the system into two p
 \end{enumerate}
 The utility of having a completely shared space $Z$ in which data, language, and tasks are represented is that it allows for arbitrary mappings between these distinct types of data. In addition to basic tasks, the system could in principle learn to map language to tasks (follow instructions) or tasks to language (explaining behavior), or tasks to tasks (changing behavior). This is a step closer to the flexible reasoning humans display. \par
 Without training on these mappings, of course, the system will not be able to execute them well. However, ideally if it is trained on a braod enough set of such mappings, it will be able to generalize these to new instances drawn from the same data/task distribution. For instances that fall outside its data distribution or for optimal performance it may require some retraining. This reflects the structure of human behavior -- we are able to learn rapidly when new knowledge is relatively consistent with our previous knowledge, but learning an entirely new paradigm (such as calculus for a new student) can be quite slow. \par 
-
 \begin{figure}
 \centering
 \begin{tikzpicture}[auto]
@@ -149,16 +148,29 @@ This output can then be appropriately dispatched depending on the task at hand. 
 Similarly, we could map from language to a task embedding, and then ask how well the system performs at the task specified by language. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows substantial flexibility within a unified system. 
 
 \section{Experiments}
-
 %\subsection{Boolean functions}
 %As a proof of concept, we first evaluated the system on a simple task of computing boolean functions on boolean inputs. Specifically, we can imagine mapping from binary-valued input vectors to a single binary output representing the evaluation of some logical proposition on the input. We train the system to figure out how to compute the predicate from seeing a subset of the (input, output) pairs. \par   
 %We can then train the system to do various meta-mappings, for example identifying certain types of functions (like XOR) or negating predicates. \par
 %
 \subsection{Learning multivariate polynomials}
+\begin{figure}
+\centering
+\includegraphics[width=0.5\textwidth]{figures/poly/basic_results.png}
+\caption{Basic meta-learning successfully generalizes to held out tasks. The solid line indicates optimal performance.}
+\label{poly_basic_results}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.5\textwidth]{figures/poly/meta_results.png}
+\caption{The system generalizes to meta-mapping new tasks. The solid line indicates optimal performance.} 
+\label{poly_meta_map_results}
+\end{figure}
 As a proof of concept, we first evaluated the system on the simple task of learning polynomials in 4 variables of degree $\leq 2$ (i.e. the task was to learn functions of the form $f: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $f \in \mathcal{P}_2 \left(\mathbb{R}\right)$). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying a polynomial by a constant, squaring a polynomial, or permuting its input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. \par
-%% TODO: appendix
 
+\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{poly_basic_results}. \par 
 
+\textbf{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. \par 
 
 
 \subsection{Continual learning}
@@ -173,11 +185,9 @@ A very simple solution to these problems is naturally suggested by our architect
 To test this idea, we pre-trained the system on 100 polynomial tasks, and then introduced 100 new tasks. We trained on these new tasks by starting from the meta-learning network's ``guess'' at the correct task embedding, and then optimizing this embedding without altering the other parameters. The results are shown in fig. \ref{poly_continual_results}. The meta-network embeddings offers good immediate performance, and substantially accelerates the optimization the process, compared to a randomly-initialized embedding. Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network. \par 
 
 
-
-
 \subsection{A stochastic learning setting: simple card games}
 Our next case study was in the setting of simple card games, where the agent receives a hand and has to decide on a bet. There is no action besides betting, and depending on the opponent's hand the agent either wins or loses the amount bet. If it wins, it is rewarded the value of the bet, if it loses, it loses that value (i.e. receives a negative reward). This doesn't require long term planning, but does incorporate some aspects of reinforcement learning, namely stochastic feedback on only the action chosen. We considered five games that are simplified analogs of various real card games, including poker and blackjack (see Appendix \ref{meth_data_cards} for details of the games). We also considered several binary options that could be applied to the games, including trying to lose instead of trying to win, or switching which suit was more valuable. These are challenging manipulations, for instance trying to lose requires completely inverting the learned $Q$-function for the task. \par
-In order to switch the system to an RL meta learning system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure and stochasticity of the game. \par   
+In order to switch the system, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure and stochasticity of the game. \par   
 We can train the system to identify the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. We can also train the system to map language to games, i.e. playing a game based on hearing its name, and then ask whether the system can generalize this to held-out games based on the systematicity of the language. For example, if trained to play ``straight flush'' but never ``losers straight flush,'' will it nevertheless be able to generalize to this case based on its experience with other games? Finally, we can use language denote meta-mappings. \par
 \textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``Losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. It is worth noting that the sample complexity in terms of number of tasks trained on is not that high, even training on 20 randomly selected tasks leads to good generalization to the held-out tasks. Furthermore, the task embeddings generated by the system are organized by the features of the games, see appendix \ref{app_cards_tsne}.\par
 \begin{figure}
@@ -226,13 +236,12 @@ We can train the system to identify the various types of games and options, and 
 %\label{cards_language_meta_results}
 %\end{figure}
 \section{Related work}
-Our work is an extrapolation from the rapidly-growing literature on meta-learning \citep[e.g.][]{Vinyals2016, Santoro2016, Finn2017a, Finn2018} and continual learning, or more generally tools for avoiding catastrophic interference based on architectural innovations \citep[e.g.][]{Fernando2017, Rusu2016}, regularization terms \citep[e.g.][]{Kirkpatrick2016, Zenke2017} or external memory \citep[e.g.][]{Sprechmann2018}. There has also been interesting recent work on hybrid approaches, such as meta-learning in an online setting \citep{Finn2019}. Our work is specifically inspired by the algorithms that attempt to have the system learn to adapt to a new task via activations rather than gradient descent \citep[e.g.][]{Wang2016a, Duan2016}. \par
-Our architecture builds directly off of prior work on HyperNetworks \citep{Ha2016} -- networks which parameterize other networks -- and other recent applications of it, such as guessing parameters for a model to accelerate model search \citep[e.g.][]{Brock2018a}. This is related to the longer history of work on different time-scales of weight adaptation \citep{Hinton1982, Ba2016}. It is more abstractly related to work on learning to propose architectures \citep[e.g.][]{Zoph2016}, and to models that learn to select and compose skills to apply to new tasks \citep[e.g.][]{Andreas, Andreas2016, Tessler2016, Reed2015}. \par 
-There has also been some interest in task (or function) embeddings. In simultaneous work \citet{Achille2019} proposed computing embeddings for tasks from the Fisher information of the parameters in a model tuned (final layer only) on the task. They show that this captures some interesting properties of the tasks, including some types of semantic relationships, and can help identify models that can perform well on a task. Other recent work has suggested a similar meta-learning framework where latent codes are computed for a task which can be decoded to a distribution over parameters \citep{Rusu2019}. Our perspective can be seen as a generalization of these that learns task embeddings in an end-to-end way, allows parameterizing a model (while some approaches only allow selection), but most importantly allows for remapping of behavior by meta-tasks. \par
-
-
-
+Our work is an extrapolation from the rapidly-growing literature on meta-learning \citep[e.g.][]{Vinyals2016, Santoro2016, Finn2017a, Finn2018, Stadie2018} and continual learning, or more generally tools for avoiding catastrophic interference based on architectural innovations \citep[e.g.][]{Fernando2017, Rusu2016}, regularization terms \citep[e.g.][]{Kirkpatrick2016, Zenke2017} or external memory \citep[e.g.][]{Sprechmann2018}. There has also been interesting recent work on hybrid approaches, such as meta-learning in an online setting \citep{Finn2019}. Our work is specifically inspired by the algorithms that attempt to have the system learn to adapt to a new task via activations rather than gradient descent \citep[e.g.][]{Wang2016a, Duan2016}. \par
+Our architecture builds directly off of prior work on HyperNetworks \citep{Ha2016} -- networks which parameterize other networks -- and other recent applications of it, such as guessing parameters for a model to accelerate model search \citep[e.g.][]{Brock2018a}. This is related to the longer history of work on different time-scales of weight adaptation \citep{Hinton1982} that has more recently been applied to meta-learning contexts \citep[e.g.][]{Ba2016, Munkhdalai2017}. It is more abstractly related to work on learning to propose architectures \citep[e.g.][]{Zoph2016}, and to models that learn to select and compose skills to apply to new tasks \citep[e.g.][]{Andreas, Andreas2016, Tessler2016, Reed2015}. \par 
+There has also been some recent interest in task (or function) embeddings. In simultaneous work \citet{Achille2019} proposed computing embeddings for tasks from the Fisher information of the parameters in a model tuned (final layer only) on the task. They show that this captures some interesting properties of the tasks, including some types of semantic relationships, and can help identify models that can perform well on a task. Other recent work has suggested a similar meta-learning framework where latent codes are computed for a task which can be decoded to a distribution over parameters \citep{Rusu2019}. Our perspective can be seen as a generalization of these that learns task embeddings in an end-to-end way, allows parameterizing a model (while some approaches only allow selection), but most importantly allows for remapping of behavior by meta-tasks. \par
 \section{Discussion}
+
+We see our proposal as a logical progression from the fundamental idea of meta-learning -- that there is a continuum between data and tasks. This naturally suggests the idea of manipulating task representations just like we manipulate data.
 
 \bibliographystyle{acm}
 \bibliography{arrr}
