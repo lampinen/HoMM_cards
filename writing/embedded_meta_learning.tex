@@ -331,7 +331,7 @@ $\mathcal{H}$ architecture & \multicolumn{3}{c|}{4 layers} \\
 $\mathcal{M}, \mathcal{H}$ num. hidden units & \multicolumn{3}{c|}{512} \\ 
 $f$ architecture & \multicolumn{3}{c|}{4 layers} \\ 
 $f$ num. hidden units & \multicolumn{3}{c|}{64} \\ 
-Nonlinearities & \multicolumn{3}{c|}{Leaky ReLU, no non-linearity at final layer of $T$, $M$, $f$.} \\
+Nonlinearities & \multicolumn{3}{p{8.5cm}|}{Leaky ReLU in most places, except no non-linearity at final layer of $T$, $M$, $f$, and sigmoid for meta-classification outputs.} \\
 \hline
 Optimizer & Adam & RMSProp & RMSProp \\
 Learning rate (base) & $3\cdot 10^{-5}$ & $1\cdot 10^{-4}$ & $1\cdot 10^{-4}$\\
@@ -359,7 +359,8 @@ $\mathcal{M}$ batch size & 50 & 128 & 768 \\
 \caption{Detailed hyperparameter specification for different experiments. A ``-'' indicates a parameter that does not apply to that experiment. Where only one value is given, it applied to all the experiments discussed. As a reminder: the shared representational space is denoted by $Z$. Input encoder: $\mathcal{I}: \text{input} \rightarrow Z$. Output decoder $\mathcal{O}: Z \rightarrow \text{output}$. Target encoder $\mathcal{T}: \text{targets} \rightarrow Z$. Meta-network $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- takes a set of (input embedding, target embedding) pairs and produces a function embedding. Hyper-network $\mathcal{h}: Z \rightarrow \text{parameters}$ -- takes a function embedding and produces a set of parameters. Task network $f: Z \rightarrow Z$ -- the transformation that executes the task mapping, implemented by a deep network with parameters specified by $\mathcal{H}$.} \label{supp_hyperparameter_table}
 \end{table}
 See table \ref{supp_hyperparameter_table} for detailed architectural description and hyperparameters for each experiment. Hyperparameters were generally found by a heuristic search, where mostly only the optimizer, learning rate annealing schedule, and number of training epochs were varied, not the architectural parameters. Some of the parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run with the current polynomial hyperparameters before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these. \par
-Each epoch consisted of a separate learning step on each task (both base and meta), in a random order. The embeddings of the tasks for the meta-learner were computed once per epoch, so as the network learned over the course of the epoch, the 
+Each epoch consisted of a separate learning step on each task (both base and meta), in a random order. In each task, the meta-learner would receive only a subset (the ``batch size`` above) of the examples to generate a function embedding, and would have to generalize to the remainder of the examples in the dataset. The embeddings of the tasks for the meta-learner were computed once per epoch, so as the network learned over the course of the epoch, these embeddings would get ``stale,'' but this did not seem to be too detrimental. \par 
+
 \subsection{Source repositories}
 The full code can be found on github:
 \begin{itemize}
