@@ -281,6 +281,7 @@ We randomly sampled the train and test polynomials as follows:
 \end{enumerate}
 The data points on which these polynomials were evaluated were sampled uniformly from $[-1, 1]$ independently for each variable, and for each polynomial. The datasets were resampled every 50 epochs of training. \par
 
+
 \subsubsection{Card games}
 \label{meth_data_cards}
 Our card games were played with two suits, and 4 values per suit. In our setup, each hand in a game has a win probability (proportional to how it ranks against all other possible hands). The agent is dealt a hand, and then has to choose to bet 0, 1, or 2 (the three actions it has available). We considered a variety of games which depend on different features of the hand: 
@@ -299,8 +300,9 @@ We also considered three binary options that could be altered to produce variant
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. The systems were trained with the full 40 possible games, but after training we discovered that the ``suits rule'' option does not substantially alter the games we chose (in the sense that the probability of a hand winning in the two variants of a game is very highly correlated), so we have omitted it from our analyses.\par
 
-\subsection{Model}
-
+\subsection{Model \& training}
+See table \ref{supp_hyperparameter_table} for detailed architectural description and hyperparameters for each experiment. Hyperparameters were generally found by a heuristic search, where mostly only the optimizer, learning rate annealing schedule, and number of training epochs were varied, not the architectural parameters. Some of the parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run with the current polynomial hyperparameters before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these. \par
+Each epoch consisted of a separate learning step on each task (both base and meta), in a random order. The embeddings of the tasks for the meta-learner were computed once per epoch, so as the network learned over the course of the epoch, the 
 \begin{table}[H]
 \centering
 \begin{tabular}{|c|ccc|}
@@ -343,11 +345,18 @@ Base datasets refreshed & \multicolumn{3}{c|}{Every 50 epochs} \\
 $\mathcal{M}$ batch size & 50 & 128 & 768 \\
 \hline
 \end{tabular}
-\caption{Detailed hyperparameter specification for different experiments. A ``-'' indicates a parameter that does not apply to that experiment. Where only one value is given, it applied to all the experiments discussed. Hyperparameters were generally found by a heuristic search. (Some of these parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these.)} \label{supp_hyperparameter_table}
+\caption{Detailed hyperparameter specification for different experiments. A ``-'' indicates a parameter that does not apply to that experiment. Where only one value is given, it applied to all the experiments discussed. As a reminder: the shared representational space is denoted by $Z$. Input encoder: $\mathcal{I}: \text{input} \rightarrow Z$. Output decoder $\mathcal{O}: Z \rightarrow \text{output}$. Target encoder $\mathcal{T}: \text{targets} \rightarrow Z$. Meta-network $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- takes a set of (input embedding, target embedding) pairs and produces a function embedding. Hyper-network $\mathcal{h}: Z \rightarrow \text{parameters}$ -- takes a function embedding and produces a set of parameters. Task network $f: Z \rightarrow Z$ -- the transformation that executes the task mapping, implemented by a deep network with parameters specified by $\mathcal{H}$.} \label{supp_hyperparameter_table}
 \end{table}
-
-As a reminder: the shared representational space is denoted by $Z$. Input encoder: $\mathcal{I}: \text{input} \rightarrow Z$. Output decoder $\mathcal{O}: Z \rightarrow \text{output}$. Target encoder $\mathcal{T}: \text{targets} \rightarrow Z$. Meta-network $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- takes a set of (input embedding, target embedding) pairs and produces a function embedding. Hyper-network $\mathcal{h}: Z \rightarrow \text{parameters}$ -- takes a function embedding and produces a set of parameters. Task network $f: Z \rightarrow Z$ -- the transformation that executes the task mapping, implemented by a deep network with parameters specified by $\mathcal{H}$. \par
-
+\subsection{Source repositories}
+The full code can be found on github:
+\begin{itemize}
+\item \url{https://github.com/lampinen/polynomials}
+    \begin{itemize}
+        \item See the continual\_learning branch for those results. 
+    \end{itemize}
+\item \url{https://github.com/lampinen/meta_cards} 
+\end{itemize}
+%%(will be made available in the de-anonymized version.)
 \section{Card game $t$-SNE} \label{app_cards_tsne}
 We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
 \begin{figure}[H]
