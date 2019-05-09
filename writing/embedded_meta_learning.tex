@@ -299,6 +299,55 @@ We also considered three binary options that could be altered to produce variant
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. The systems were trained with the full 40 possible games, but after training we discovered that the ``suits rule'' option does not substantially alter the games we chose (in the sense that the probability of a hand winning in the two variants of a game is very highly correlated), so we have omitted it from our analyses.\par
 
+\subsection{Model}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|ccc|}
+\hline 
+& \phantom{bla}Polynomials\phantom{la} & Continual learning & \phantom{blahb}Cards\phantom{blahb} \\
+\hline
+$Z$-dimension & 512 & 512 & 512 \\
+$\mathcal{I}$ num. layers & \multicolumn{3}{c|}{3} \\ 
+$\mathcal{I}$ num. hidden units & \multicolumn{3}{c|}{64} \\ 
+$\mathcal{O}$ num. layers & 1 & 1 & 3 \\ 
+$\mathcal{O}$ num. hidden units & - & - & 512 \\ 
+$\mathcal{T}$ num. layers & \multicolumn{3}{c|}{1} \\ 
+$\mathcal{M}$ architecture & \multicolumn{3}{c|}{2 layers per-datum, max pool across, 2 layers} \\ 
+$\mathcal{H}$ architecture & \multicolumn{3}{c|}{4 layers} \\ 
+$\mathcal{M}, \mathcal{H}$ num. hidden units & \multicolumn{3}{c|}{512} \\ 
+$f$ architecture & \multicolumn{3}{c|}{4 layers} \\ 
+$f$ num. hidden units & \multicolumn{3}{c|}{64} \\ 
+Nonlinearities & \multicolumn{3}{c|}{Leaky ReLU, no non-linearity at final layer of $T$, $M$, $f$.} \\
+\hline
+Optimizer & Adam & RMSProp & RMSProp \\
+Learning rate (base) & $3\cdot 10^{-5}$ & $1\cdot 10^{-4}$ & $1\cdot 10^{-4}$\\
+Learning rate (meta) & $1\cdot 10^{-5}$ & - & $1\cdot 10^{-4}$\\
+L.R. decay rate (base) & $*0.85$ & $*0.85$ & $*0.85$ \\
+L.R. decay rate (meta) & $*0.85$ & - & $*0.9$ \\
+L.R. min (base) & \multicolumn{3}{c|}{$3 \cdot 10^{-8}$} \\
+L.R. min (meta) & $1 \cdot 10^{-7}$& - & $3 \cdot 10^{-7}$ \\
+L.R. decays every & \multicolumn{3}{c|}{$100$ epochs if above min.} \\
+Cached embedding L.R. & - & $1\cdot 10^{-3}$ & -\\
+Num. training epochs & 4000 & 3000 & 40000 \\
+\hline
+Num. base tasks (eval) & 60 & 100 & 36 or 20 \\
+Num. base tasks (training) & 1200 (= 60 * 20) & 100 & 36 or 20  \\
+Num. meta classifications & 6 & - & 8  \\
+Num. meta mappings & 20 & - & 3  \\
+Num. new base tasks & 40 & 30 & 4 or 20 \\ 
+Num. new meta mappings & 16 & - & 0  \\
+Num. new meta classifications &  \multicolumn{3}{c|}{0} \\
+Base dataset size & \multicolumn{3}{c|}{1024} \\
+Base datasets refreshed & \multicolumn{3}{c|}{Every 50 epochs} \\
+$\mathcal{M}$ batch size & 50 & 128 & 768 \\
+\hline
+\end{tabular}
+\caption{Detailed hyperparameter specification for different experiments. A ``-'' indicates a parameter that does not apply to that experiment. Where only one value is given, it applied to all the experiments discussed. Hyperparameters were generally found by a heuristic search. (Some of these parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these.)} \label{supp_hyperparameter_table}
+\end{table}
+
+As a reminder: the shared representational space is denoted by $Z$. Input encoder: $\mathcal{I}: \text{input} \rightarrow Z$. Output decoder $\mathcal{O}: Z \rightarrow \text{output}$. Target encoder $\mathcal{T}: \text{targets} \rightarrow Z$. Meta-network $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- takes a set of (input embedding, target embedding) pairs and produces a function embedding. Hyper-network $\mathcal{h}: Z \rightarrow \text{parameters}$ -- takes a function embedding and produces a set of parameters. Task network $f: Z \rightarrow Z$ -- the transformation that executes the task mapping, implemented by a deep network with parameters specified by $\mathcal{H}$. \par
+
 \section{Card game $t$-SNE} \label{app_cards_tsne}
 We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
 \begin{figure}[H]
