@@ -280,7 +280,19 @@ We randomly sampled the train and test polynomials as follows:
 \item For each term combining the relevant variables (including the intercept), include the term with probability 0.5. If so give it a random coefficient drawn from $\mathcal{N}(0, 2.5)$.
 \end{enumerate}
 The data points on which these polynomials were evaluated were sampled uniformly from $[-1, 1]$ independently for each variable, and for each polynomial. The datasets were resampled every 50 epochs of training. \par
-
+\textbf{Meta-tasks:} For meta-tasks, we trained the network on 6 task-embedding classification tasks:
+\begin{itemize}
+\item Classifying polynomials as constant/non-constant.
+\item Classifying polynomials as zero/non-zero intercept.
+\item For each variable, identifying whether that variable was relevant to the polynomial.
+\end{itemize}
+We trained on 20 meta-mapping tasks, and held out 16 related meta-mappings.
+\begin{itemize}
+\item Squaring polynomials (where applicable).
+\item Adding a constant (trained: -3, -1, 1, 3, held-out: 2, -2).
+\item Multiplying by a constant (trained: -3, -1, 3, held-out: 2, -2).
+\item Permuting inputs (trained: 1320, 1302, 3201, 2103, 3102, 0132, 2031, 3210, 2301, 1203, 1023, 2310, held-out: 0312, 0213, 0321, 3012, 1230, 1032, 3021, 0231, 0123, 3120, 2130, 2013).
+\end{itemize}
 
 \subsubsection{Card games}
 \label{meth_data_cards}
@@ -292,18 +304,16 @@ Our card games were played with two suits, and 4 values per suit. In our setup, 
 \item \textbf{Match:} the hand with cards that differ least in value (suit counts as 0.5 pt difference) wins.
 \item \textbf{Blackjack:} The hand's value increases with the sum of the cards until it crosses 5, at which point the player ``goes bust,'' and the value becomes negative. 
 \end{itemize}
-We also considered three binary options that could be altered to produce variants of these games:
+We also considered three binary attributes that could be altered to produce variants of these games:
 \begin{itemize}
 \item \textbf{Losers:} Try to lose instead of winning! Reverses the ranking of hands.
 \item \textbf{Suits rule:} Instead of suits being less important than values, they are more important (essentially flipping the role of suit and value in most games).
 \item \textbf{Switch suit:} Switches which of the suits is more valuable.
 \end{itemize}
 Any combination of these options can be applied to any of the 5 games, yielding 40 possible games. The systems were trained with the full 40 possible games, but after training we discovered that the ``suits rule'' option does not substantially alter the games we chose (in the sense that the probability of a hand winning in the two variants of a game is very highly correlated), so we have omitted it from our analyses.\par
-
+\textbf{Meta-tasks:} For meta-tasks, we gave the network 8 task-embedding classification tasks (one-vs-all classification of each of the 5 game types, and of each of the 3 attributes), and 3 meta-mapping tasks (each of the 3 attributes).
 \subsection{Model \& training}
-See table \ref{supp_hyperparameter_table} for detailed architectural description and hyperparameters for each experiment. Hyperparameters were generally found by a heuristic search, where mostly only the optimizer, learning rate annealing schedule, and number of training epochs were varied, not the architectural parameters. Some of the parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run with the current polynomial hyperparameters before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these. \par
-Each epoch consisted of a separate learning step on each task (both base and meta), in a random order. The embeddings of the tasks for the meta-learner were computed once per epoch, so as the network learned over the course of the epoch, the 
-\begin{table}[H]
+\begin{table}
 \centering
 \begin{tabular}{|c|ccc|}
 \hline 
@@ -347,6 +357,8 @@ $\mathcal{M}$ batch size & 50 & 128 & 768 \\
 \end{tabular}
 \caption{Detailed hyperparameter specification for different experiments. A ``-'' indicates a parameter that does not apply to that experiment. Where only one value is given, it applied to all the experiments discussed. As a reminder: the shared representational space is denoted by $Z$. Input encoder: $\mathcal{I}: \text{input} \rightarrow Z$. Output decoder $\mathcal{O}: Z \rightarrow \text{output}$. Target encoder $\mathcal{T}: \text{targets} \rightarrow Z$. Meta-network $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- takes a set of (input embedding, target embedding) pairs and produces a function embedding. Hyper-network $\mathcal{h}: Z \rightarrow \text{parameters}$ -- takes a function embedding and produces a set of parameters. Task network $f: Z \rightarrow Z$ -- the transformation that executes the task mapping, implemented by a deep network with parameters specified by $\mathcal{H}$.} \label{supp_hyperparameter_table}
 \end{table}
+See table \ref{supp_hyperparameter_table} for detailed architectural description and hyperparameters for each experiment. Hyperparameters were generally found by a heuristic search, where mostly only the optimizer, learning rate annealing schedule, and number of training epochs were varied, not the architectural parameters. Some of the parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run with the current polynomial hyperparameters before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these. \par
+Each epoch consisted of a separate learning step on each task (both base and meta), in a random order. The embeddings of the tasks for the meta-learner were computed once per epoch, so as the network learned over the course of the epoch, the 
 \subsection{Source repositories}
 The full code can be found on github:
 \begin{itemize}
