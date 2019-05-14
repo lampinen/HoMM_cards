@@ -53,7 +53,7 @@ Stanford University\\
 \maketitle
 
 \begin{abstract}
-How can deep learning systems flexibly reuse their knowledge? Toward this goal, we propose a new class of challenges, and a class of architectures that can solve them. The challenges are in the form of meta-mappings, which involve systematically transforming task behaviors to adapt to new tasks. We suggest that the key to achieving these challenges is representing the task being performed along with the computations used to perform it. We therefore draw inspiration from meta-learning and functional programming to propose a class of Embedded Meta-Learning (EML) architectures that represent both data and tasks in a shared latent space. We demonstrate the flexibility of these architectures by showing that they can perform meta-mappings, i.e. that they can exhibit zero-shot remapping of behavior on new tasks. 
+How can deep learning systems flexibly reuse their knowledge? Toward this goal, we propose a new class of challenges, and a class of architectures that can solve them. The challenges are in the form of meta-mappings, which involve systematically transforming task behaviors to adapt to new tasks. We suggest that the key to achieving these challenges is representing the task being performed along with the computations used to perform it. We therefore draw inspiration from meta-learning and functional programming to propose a class of Embedded Meta-Learning (EML) architectures that represent both data and tasks in a shared latent space. EML architectures are applicable to any type of machine learning task, including supervised learning and reinforcement learning. We demonstrate the flexibility of these architectures by showing that they can perform meta-mappings, i.e. that they can exhibit zero-shot remapping of behavior on new tasks. 
 \end{abstract}
 
 \section{Introduction}
@@ -71,11 +71,11 @@ To achieve this, we propose a new class of Embedded Meta-Learning (EML) architec
 \vspace{-0.75em}
 \begin{enumerate} \setlength \itemsep{0em}
 \item An input/output system: domain specific encoders and decoders (vision, language, etc.) that map into a shared embedding space $Z$.
-\item A meta-learning system which embeds tasks into the shared embedding space $Z$, and learns to perform tasks in accordance with their embeddings.
+\item A meta-learning system which embeds tasks into the shared embedding space $Z$, and learns to map task embeddings to behavior.
 \end{enumerate}
 \vspace{-0.75em}
 The utility of having a completely shared space $Z$ in which data, language, and tasks are represented is that it allows for arbitrary mappings between these distinct types of data. In addition to basic tasks, the system could in principle learn to map language to tasks (follow instructions) or tasks to language (explaining behavior), or tasks to tasks (changing behavior based on examples). This is a step closer to the flexible reasoning humans display. \par
-Without training on these mappings, of course, the system will not be able to execute them well. However, if it is trained on a broad enough set of such mappings, it will be able to generalize these to new instances drawn from the same data/task distribution, as we demonstrate below. For instances that fall outside its data distribution, or for optimal performance, it may require some retraining, however. This reflects the structure of human behavior -- we are able to learn rapidly when new knowledge is relatively consistent with our previous knowledge, but learning an entirely new paradigm (such as calculus for a new student) can be quite slow. \par 
+Without training on these mappings, of course, the system will not be able to execute them well. However, if it is trained on a broad enough set of such mappings, it will be able to generalize to new instances drawn from the same data/task distribution, as we demonstrate below. For instances that fall outside its data distribution, or for optimal performance, it may require some retraining, however. This reflects the structure of human behavior -- we are able to learn rapidly when new knowledge is relatively consistent with our previous knowledge, but learning an entirely new paradigm (such as calculus for a new student) can be quite slow \citep[c.f.][]{Kumaran2016}. \par 
 \begin{figure}
 \centering
 \begin{tikzpicture}[auto, scale=0.75]
@@ -89,10 +89,10 @@ Without training on these mappings, of course, the system will not be able to ex
 \node [conc] at (-7, -4) (perc) {\textbf{Input}};
 %%\node [conc] at (-7.25, -2.5) (lang) {\textbf{Language}};
 \node [conc] at (-7, 4) (act) {\textbf{Output}};
-\node [block, text width=2cm] at (-4.5, -2) (IE) {$\bm{\mathcal{I}}$: \textbf{Input Encoder}};
+\node [block, text width=2cm] at (-4.5, -2) (IE) {$\bm{\mathcal{I}}$: \textbf{Input encoder}};
 %%\node [block, text width=2cm] at (-5, -0.5) (LE) {$\bm{\mathcal{L}}$: \textbf{Lang. Encoder}};
-\node [block, text width=2.2cm] at (-4, 2.5) (OD) {$\bm{\mathcal{O}}$: \textbf{Output Decoder}};
-\node [block, text width=2cm] at (-5.5, 1) (TE) {$\bm{\mathcal{T}}$: \textbf{Target Encoder}};
+\node [block, text width=2.2cm] at (-4, 2.5) (OD) {$\bm{\mathcal{O}}$: \textbf{Output decoder}};
+\node [block, text width=2cm] at (-5.5, 1) (TE) {$\bm{\mathcal{T}}$: \textbf{Target encoder}};
 \path [line] (perc.north) to (IE.south);
 %%\path [line] (lang.north) to ([xshift=0.05cm, yshift=0.05cm]LE.south west);
 \path [line] ([xshift=-0.05cm, yshift=-0.05cm]IE.north east) to (rep.south west);
@@ -135,8 +135,8 @@ $\vdots$
 \caption{Schematic of our general architecure. Blocks with solid edges denote deep networks with learnable parameters, dashed edges represent inputs, outputs, embeddings, etc., and $f$ is a deep network with parameters specified by $\mathcal{H}$. Note that there may be multiple input, output, and target decoders if the system has multiple input modalities, e.g. both language and vision. See appendix \ref{app_model_details} for details.} \label{architecture_fig}
 \end{figure}
 More formally, we take a \emph{functional} perspective on learning. A datum can be represented by a constant function which outputs it. (For example, each point in the latent space of an autoencoder can be thought of this way.) This allows us to interpret model inputs or outputs as functions. We can then interpret most machine learning tasks as a mapping of functions to functions. The key insight is that, while these mappings could be over functions that represent data\footnote{Where ``data'' is a quite flexible term. The approach is relatively agnostic to whether the learning is supervised or reinforcement learning, whether inputs are images or natural language, etc.}, they could also operate on task-mappings themselves. This is related to the idea of a homoiconic programming language, where programs can be manipulated like data. Under this perspective, learning tasks, learning to map from language to tasks, and learning to flexibly transform between tasks, are all the same type of problem. \par
-Specifically, we embed inputs, targets, and mappings into a shared representational space $Z$. Inputs are embedded by a deep network $\mathcal{I}: \text{input} \rightarrow Z$. Outputs are decoded from the representational space by a deep network $\mathcal{O}: Z \rightarrow \text{output}$. Targets are encoded by a deep network $\mathcal{T}: \text{targets} \rightarrow Z$. \par
-Given this, the task of mapping inputs to outputs can be framed as trying to find a transformation of the representational space that takes the (embedded) inputs from the training set to the (embedded) targets. These transformations are performed by a system with the following components (see Fig. \ref{architecture_fig} for a schematic):  
+Specifically, we embed inputs, targets, and mappings into a shared representational space $Z$. Inputs are embedded by a deep network $\mathcal{I}: \text{input} \rightarrow Z$. Model outputs are decoded from the representational space by a deep network $\mathcal{O}: Z \rightarrow \text{output}$. Target outputs are encoded by a deep network $\mathcal{T}: \text{targets} \rightarrow Z$. \par
+Given this, the task of mapping inputs to outputs can be framed as trying to find a transformation of the representational space that takes the (embedded) inputs from the training set to embeddings that will decode to the target outputs. These transformations are performed by a system with the following components (see Fig. \ref{architecture_fig} for a schematic):  
 \vspace{-0.75em}
 \begin{itemize} \setlength\itemsep{0em}
 \item $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- the meta network, which takes a set of (input embedding, target embedding) pairs and produces a function embedding. 
@@ -145,15 +145,15 @@ Given this, the task of mapping inputs to outputs can be framed as trying to fin
 \end{itemize}
 \vspace{-0.75em}
 A basic forward pass through the system would proceed as follows. First, a training dataset is encoded by $\mathcal{I}$ and $\mathcal{T}$. Some of these examples are fed to $\mathcal{M}$ to produce a function embedding (the remainder can be unlabeled during inference, or held-out to avoid memorization during training). This function embedding is mapped through $\mathcal{H}$ to parameterize $f$, and then $f$ is used to process the remaining examples, and $\mathcal{O}$ to map the resultant embeddings to outputs. This system can be trained end-to-end. See appendix \ref{app_model_details} for detailed architecture, operation, and hyper-parameters. \par 
-To write this explicitly, suppose we have some dataset of input, target pairs ($D_1 = \{(x_0, y_0), ...\}$), and some input $x$ for which we wish to generate a predicted output $\hat{y}$. This output would be generated as follows: 
+To write this explicitly, suppose we have some dataset of input, target pairs ($D_1 = \{(x_0, y_0), ...\}$), and some input $x$ from some other dataset $D_2$ for which we wish to generate a predicted output $\hat{y}$. This output would be generated as follows: 
 \[\hat{y} = \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\]
 where $f_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
 \[f_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_0\right), \mathcal{T}\left(y_0\right) \right), \left(\mathcal{I}\left(x_1\right), \mathcal{T}\left(y_1\right) \right), ... \right\}\right)\right)\]
-This system can be trained end-to-end if labels are provided for the second set of inputs. In particular, suppose we have some loss function $\mathcal{L}(y, \hat{y})$ defined on a single target output $y$ and actual model output $\hat{y}$, for some input $x$. We define our total loss computed on some dataset $D_2$ as:
+This system can be trained end-to-end if labels are provided for the second set of inputs $D_2$. In particular, suppose we have some loss function $\mathcal{L}(y, \hat{y})$ defined on a single target output $y$ and actual model output $\hat{y}$, for some input $x$. We define our total loss computed on some dataset $D_2$ as:
 \[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathcal{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
-More generally, suppose we have some input which is already embedded in the representation space $z_{in} \in Z$, and a task/function embedding $z_{\text{function}} \in Z$. Then we can generate an output $\hat{z}_{out} \in Z$ as:  
-\[\hat{z}_{out} = f_{z_{\text{function}}}(z_{in}) \qquad \text{where } f_{z_{\text{function}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{function}}\right)\]
-This output can then be appropriately dispatched depending on the task at hand. For example, if the $z_{in,i}$ are the system's embeddings for trying to win various games, and the $z_{out,i}$ are the corresponding embeddings for trying to lose those games, then $z_{out}$ could be interpreted as the system's guess at a losing strategy for the game embedded as $z_{in}$, and then could be used to play that game. We could then evaluate performance by how well the system actually performs at losing with the $z_{out}$ strategy. \par
+However, the system is not limited to simply mapping inputs to outputs. The key advantage of our architecture is that it allows transforming anything that is embedded in $Z$ using the same system. For example, suppose we have some task embedding $z_{old} \in Z$, and a meta-mapping embedding $z_{\text{meta}} \in Z$. Then we can generate a new task embedding $\hat{z}_{new} \in Z$ as:  
+\[\hat{z}_{new} = f_{z_{\text{function}}}(z_{old}) \qquad \text{where } f_{z_{\text{function}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{meta}}\right)\]
+For example, if the $z_{old}$ is the system's embedding for trying to win at go, and $z_{meta}$ is the meta-task of switching to trying to lose a game, then $z_{new}$ could be interpreted as the system's guess at a losing strategy for go. We could then evaluate performance by how well the system actually loses at go with the $z_{new}$ strategy. \par
 Similarly, we could map from language to a task embedding, and then ask how well the system performs at the task specified by language. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows substantial flexibility within a unified framework. 
 
 %\subsection{Boolean functions}
@@ -176,7 +176,7 @@ Similarly, we could map from language to a task embedding, and then ask how well
 \end{figure}
 As a proof of concept, we first evaluated the system on the task of learning polynomials of degree $\leq 2$ in 4 variables (i.e. the task was to regress functions of the form $f: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $f \in \mathcal{P}_2 \left(\mathbb{R}\right)$, though the model was given no prior inductive bias toward polynomial forms). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying a polynomial by a constant, squaring a polynomial, or permuting its input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. \par
 
-\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out task from a few examples in Fig. \ref{poly_basic_results}. \par 
+\textbf{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out polynomial from a few data points in Fig. \ref{poly_basic_results}. \par 
 
 \textbf{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application. \par 
 
