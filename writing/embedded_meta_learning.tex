@@ -418,6 +418,181 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \label{supp_poly_continual_results}
 \end{figure}
 
+\section{Numerical results}
+In this section we provide the mean values and bootstrap confidence intervals corresponding to the major figures in the paper, as well as the baseline results in those figures. Tables were generated with stargazer \citep{Hlavac2018}.
+
+
+\subsection{Cards}
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cccccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_run\_type & named\_game\_type & is\_new\_game & average\_reward & avg\_rwd\_CI\_low & avg\_rwd\_CI\_high \\
+\hline \\[-1.8ex]
+Random 50\% holdout & High card & Trained & 0.53 & 0.521 & 0.541 \\
+Random 50\% holdout & High card & Held out & 0.441 & 0.42 & 0.462 \\
+Random 50\% holdout & Match & Trained & 0.537 & 0.524 & 0.55 \\
+Random 50\% holdout & Match & Held out & 0.539 & 0.523 & 0.556 \\
+Random 50\% holdout & Pairs & Trained & 0.521 & 0.504 & 0.536 \\
+Random 50\% holdout & Pairs & Held out & 0.453 & 0.434 & 0.47 \\
+Random 50\% holdout & Straight flush & Trained & 0.525 & 0.508 & 0.54 \\
+Random 50\% holdout & Straight flush & Held out & 0.484 & 0.466 & 0.502 \\
+Random 50\% holdout & Blackjack & Trained & 0.582 & 0.557 & 0.603 \\
+Random 50\% holdout & Blackjack & Held out & 0.492 & 0.468 & 0.513 \\
+Targeted 10\% holdout & High card & Trained & 0.527 & 0.518 & 0.536 \\
+Targeted 10\% holdout & Match & Trained & 0.536 & 0.526 & 0.546 \\
+Targeted 10\% holdout & Pairs & Trained & 0.522 & 0.512 & 0.531 \\
+Targeted 10\% holdout & Straight flush & Trained & 0.524 & 0.509 & 0.538 \\
+Targeted 10\% holdout & Straight flush & Held out & 0.361 & 0.332 & 0.39 \\
+Targeted 10\% holdout & Blackjack & Trained & 0.586 & 0.575 & 0.598 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for basic meta-learning, figure \ref{cards_basic_results}}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+is\_new\_game & named\_run\_type & named\_game\_type & expected\_reward \\
+\hline \\[-1.8ex]
+Trained & Targeted 10\% holdout & High card & 0.531 \\
+Trained & Targeted 10\% holdout & Match & 0.541 \\
+Trained & Targeted 10\% holdout & Pairs & 0.532 \\
+Trained & Targeted 10\% holdout & Straight flush & 0.537 \\
+Held out & Targeted 10\% holdout & Straight flush & 0.274 \\
+Trained & Targeted 10\% holdout & Blackjack & 0.592 \\
+Trained & Random 50\% holdout & High card & 0.531 \\
+Held out & Random 50\% holdout & High card & 0.396 \\
+Trained & Random 50\% holdout & Match & 0.541 \\
+Held out & Random 50\% holdout & Match & 0.541 \\
+Trained & Random 50\% holdout & Pairs & 0.532 \\
+Held out & Random 50\% holdout & Pairs & 0.37 \\
+Trained & Random 50\% holdout & Straight flush & 0.536 \\
+Held out & Random 50\% holdout & Straight flush & 0.452 \\
+Trained & Random 50\% holdout & Blackjack & 0.595 \\
+Held out & Random 50\% holdout & Blackjack & 0.456 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for playing most correlated learned strategy for basic meta-learning, dashed colored lines in figure \ref{cards_basic_results}}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_game\_type & expected\_reward \\
+\hline \\[-1.8ex]
+Blackjack & 0.592 \\
+High card & 0.531 \\
+Match & 0.541 \\
+Pairs & 0.532 \\
+Straight flush & 0.536 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for playing optimal rewards for basic meta-learning, solid lines in figure \ref{cards_basic_results}}
+\end{table}
+
+
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+is\_new\_game & named\_run\_type & named\_game\_type & expected\_reward \\
+\hline \\[-1.8ex]
+Trained & Targeted 10\% holdout & High card & 0.531 \\
+Trained & Targeted 10\% holdout & Match & 0.541 \\
+Trained & Targeted 10\% holdout & Pairs & 0.532 \\
+Trained & Targeted 10\% holdout & Straight flush & 0.537 \\
+Held out & Targeted 10\% holdout & Straight flush & 0.274 \\
+Trained & Targeted 10\% holdout & Blackjack & 0.592 \\
+Trained & Random 50\% holdout & High card & 0.531 \\
+Held out & Random 50\% holdout & High card & 0.396 \\
+Trained & Random 50\% holdout & Match & 0.541 \\
+Held out & Random 50\% holdout & Match & 0.541 \\
+Trained & Random 50\% holdout & Pairs & 0.532 \\
+Held out & Random 50\% holdout & Pairs & 0.37 \\
+Trained & Random 50\% holdout & Straight flush & 0.536 \\
+Held out & Random 50\% holdout & Straight flush & 0.452 \\
+Trained & Random 50\% holdout & Blackjack & 0.595 \\
+Held out & Random 50\% holdout & Blackjack & 0.456 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for most correlated baselines for basic meta-learning, dashed colored lines in figure \ref{cards_basic_results}}
+\end{table}
+
+
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cccccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_run\_type & named\_meta\_task & is\_new & average\_reward & avg\_rwd\_CI\_low & avg\_rwd\_CI\_high \\
+\hline \\[-1.8ex]
+Targeted 10\% holdout & Switch suits & Trained & 0.523 & 0.512 & 0.534 \\
+Targeted 10\% holdout & Switch suits & Held out & 0.234 & 0.196 & 0.273 \\
+Targeted 10\% holdout & Losers & Trained & 0.532 & 0.511 & 0.546 \\
+Targeted 10\% holdout & Losers & Held out & 0.289 & 0.241 & 0.322 \\
+Random 50\% holdout & Switch suits & Trained & 0.528 & 0.521 & 0.533 \\
+Random 50\% holdout & Switch suits & Held out & 0.375 & 0.368 & 0.382 \\
+Random 50\% holdout & Losers & Trained & 0.531 & 0.523 & 0.538 \\
+Random 50\% holdout & Losers & Held out & 0.427 & 0.417 & 0.436 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for meta-mapping from examples, figure \ref{cards_meta_map_results_examples}}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cccccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_run\_type & named\_meta\_task & is\_new & average\_reward & avg\_rwd\_CI\_low & avg\_rwd\_CI\_high \\
+\hline \\[-1.8ex]
+Language (random 50\%) & Switch suits & Trained & 0.525 & 0.52 & 0.534 \\
+Language (random 50\%) & Switch suits & Held out & 0.371 & 0.353 & 0.384 \\
+Language (random 50\%) & Losers & Trained & 0.524 & 0.521 & 0.527 \\
+Language (random 50\%) & Losers & Held out & 0.426 & 0.413 & 0.44 \\
+Language (targeted 10\%) & Switch suits & Trained & 0.531 & 0.52 & 0.542 \\
+Language (targeted 10\%) & Switch suits & Held out & 0.225 & 0.146 & 0.305 \\
+Language (targeted 10\%) & Losers & Trained & 0.539 & 0.533 & 0.544 \\
+Language (targeted 10\%) & Losers & Held out & 0.341 & 0.308 & 0.367 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for meta-mapping from language, figure \ref{cards_meta_map_results_language}}
+\end{table}
+
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} cccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_run\_type & named\_meta\_task & is\_new & expected\_reward \\
+\hline \\[-1.8ex]
+Targeted 10\% holdout & Switch suits & Trained & 0.298 \\
+Targeted 10\% holdout & Switch suits & Held out & 0.368 \\
+Targeted 10\% holdout & Losers & Trained & -0.446 \\
+Targeted 10\% holdout & Losers & Held out & -0.463 \\
+Random 50\% holdout & Switch suits & Trained & 0.37 \\
+Random 50\% holdout & Switch suits & Held out & 0.278 \\
+Random 50\% holdout & Losers & Trained & -0.465 \\
+Random 50\% holdout & Losers & Held out & -0.444 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table of rewards if system ignored meta-mapping, colored dashed lines in figure \ref{cards_meta_map_results}}
+\end{table}
+
 \end{document}
 
 

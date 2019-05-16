@@ -5,6 +5,7 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
+library(stargazer)
 ```
 
 ```{r}
@@ -214,6 +215,23 @@ most_correlated_baselines = crossing(run_type=result_subdirs, baseline_data) %>%
 
 ```
 
+And some stargazing:
+```{r}
+optimal_baselines %>%
+  select(-game_type) %>%
+  mutate_at(vars(expected_reward), function(x) {round(x, digits=3)}) %>%
+  stargazer(summary = F, rownames = F, digits=2)
+```
+
+```{r}
+most_correlated_baselines[,c('run_type','game_type','is_new_game','named_run_type','named_game_type','expected_reward')] %>%
+  ungroup() %>%
+  filter(run_type %in% c("basic", "basic_random_holdout_longer")) %>%
+  select(-game_type, -run_type) %>%
+  mutate(is_new_game=as.character(is_new_game)) %>%
+  mutate_at(vars(expected_reward), function(x) {round(x, digits=3)}) %>%
+  stargazer(summary = F, rownames = F, digits=2)
+```
 
 
 # meta-learning tests
@@ -241,11 +259,20 @@ reward_d = reward_d %>%
 avg_reward_d = reward_d %>%
   select(-game_str) %>%
   filter(epoch == 0) %>%
-  group_by(run_type, game_type, named_game_type, is_new_game) %>%
-  summarize(avg_reward = mean(reward), sd_reward=sd(reward),
-            se_reward = sd_reward/sqrt(n()), 
-            ci_lo = avg_reward - 1.96*se_reward, 
-            ci_hi = avg_reward + 1.96*se_reward)
+  group_by(named_run_type, run_type, game_type, named_game_type, is_new_game) %>%
+  do(data.frame(mean_cl_boot(.$reward))) %>% 
+  ungroup() %>%
+  rename(average_reward=y, avg_rwd_CI_low=ymin, avg_rwd_CI_high=ymax)
+
+```
+
+```{r}
+avg_reward_d %>%
+  filter(run_type %in% c("basic", "basic_random_holdout_longer")) %>%
+  select(-game_type, -run_type) %>%
+  mutate(is_new_game=as.character(is_new_game)) %>%
+  mutate_at(vars(average_reward, contains("CI")), function(x) {round(x, digits=3)}) %>%
+  stargazer(summary = F, rownames = F, digits=2)
 ```
 
 ```{r}
@@ -304,14 +331,14 @@ ggsave("writing/figures/basic_meta_learning.png", width=4.2, height=3)
 ```{r}
 summary_plot(reward_d %>%
                filter(run_type %in% c("basic_slower_integration", "basic_random_holdout_longer_slower_integration"),
-                      epoch <= 200),
+                      epoch < 500),
              "epoch", "reward", "is_new_game",
              continuous_x=T) +
   facet_wrap(. ~ named_run_type) +
   geom_hline(yintercept=mean(optimal_baselines$expected_reward),
              alpha=0.5) +
   labs(x = "Epoch after introducing new tasks") +
-  theme(plot.margin=margin(b=1, units="cm"))
+  theme(plot.margin=margin(t=0.24, b=1.7, unit="cm"))
   
 ggsave("writing/figures/basic_meta_learning_integrating_over_time.png", width=4.2, height=3)
 ```
@@ -534,6 +561,17 @@ meta_baseline_unmapped_d = crossing(meta_task=meta_tasks,
 
 ```
 
+```{r}
+meta_baseline_unmapped_d %>%
+  ungroup() %>%
+  filter(run_type %in% c("basic", "basic_random_holdout_longer"),
+         meta_task != "toggle_suits_rule") %>%
+  select(-meta_task, -run_type) %>%
+  mutate(is_new=as.character(is_new)) %>%
+  mutate_at(vars(expected_reward), function(x) {round(x, digits=3)}) %>%
+  stargazer(summary = F, rownames = F, digits=2)
+```
+
 
 ```{r}
 meta_d = load_d(results_dir, result_subdirs, num_runs, "new_meta_true_losses")
@@ -557,11 +595,21 @@ avg_meta_d = meta_d %>%
   group_by(run_type, named_run_type, run, meta_task, named_meta_task, is_new) %>%
   summarize(avg_reward = mean(reward)) %>%
   group_by(run_type, named_run_type, meta_task, named_meta_task, is_new) %>%
-  summarize(avg_avg_reward = mean(avg_reward), sd_avg_reward = sd(avg_reward),
-            se_reward = sd_avg_reward/sqrt(n()), 
-            ci_lo = avg_avg_reward - 1.96*se_reward, 
-            ci_hi = avg_avg_reward + 1.96*se_reward)
-  
+  do(data.frame(mean_cl_boot(.$avg_reward))) %>%
+  ungroup() %>%
+  rename(average_reward=y, avg_rwd_CI_low=ymin, avg_rwd_CI_high=ymax)
+
+
+```
+
+```{r}
+avg_meta_d %>%
+  filter(run_type %in% c("basic", "basic_random_holdout_longer"),
+         meta_task != "toggle_suits_rule") %>%
+  select(-meta_task, -run_type) %>%
+  mutate(is_new=as.character(is_new)) %>%
+  mutate_at(vars(average_reward, contains("CI")), function(x) {round(x, digits=3)}) %>%
+  stargazer(summary = F, rownames = F, digits=2)
 ```
 
 ```{r}
@@ -641,6 +689,27 @@ ggsave("writing/figures/language_meta_mapping.png", width=4.2, height=3)
 
 ```
 
+```{r}
+avg_lang_meta_d = lang_meta_d %>%
+  group_by(run_type, named_run_type, run, meta_task, named_meta_task, is_new) %>%
+  summarize(avg_reward = mean(reward)) %>%
+  group_by(run_type, named_run_type, meta_task, named_meta_task, is_new) %>%
+  do(data.frame(mean_cl_boot(.$avg_reward))) %>%
+  ungroup() %>%
+  rename(average_reward=y, avg_rwd_CI_low=ymin, avg_rwd_CI_high=ymax)
+
+
+```
+
+```{r}
+avg_lang_meta_d %>%
+  filter(run_type %in% c("meta_batch_128", "language_simplified_random_holdout"),
+         meta_task != "toggle_suits_rule") %>%
+  select(-meta_task, -run_type) %>%
+  mutate(is_new=as.character(is_new)) %>%
+  mutate_at(vars(average_reward, contains("CI")), function(x) {round(x, digits=3)}) %>%
+  stargazer(summary = F, rownames = F, digits=2)
+```
 # embeddings
 ```{r}
 library(tsne)
