@@ -146,8 +146,8 @@ This system can be trained end-to-end if labels are provided for the second set 
 \[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathfrak{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
 However, the system is not limited to simply mapping inputs to outputs. The key advantage of our architecture is that it allows transforming anything that is embedded in $Z$ using the same system. For example, suppose we have some task embedding $z_{old} \in Z$, and a meta-mapping embedding $z_{\text{meta}} \in Z$, e.g. from $z_{\text{meta}} = \mathcal{M}\left( \left\{\left((z_{source,0},z_{target,0}, ...\right) \right\}\right)$. Then we can generate a new task embedding $\hat{z}_{new} \in Z$ as:  
 \[\hat{z}_{new} = f_{z_{\text{function}}}(z_{old}) \qquad \text{where } f_{z_{\text{meta}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{meta}}\right)\]
-For example, if the $z_{old}$ is the system's embedding for trying to win at go, and the meta-dataset consists of examples of a winning strategy and a losing strategy for different games, then $\hat{z}_{new}$ could be interpreted as the system's guess at a losing strategy for go. We could then evaluate how well the system actually loses with the $\hat{z}_{new}$ strategy. \par
-Similarly, we could map from language to a task embedding, and then evaluate the system at the specified task. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows substantial flexibility within a unified framework. 
+For example, if the $z_{old}$ is the system's embedding for trying to win at go, and the meta-dataset consists of examples of a winning strategy and a losing strategy for different games, then $\hat{z}_{new}$ could be interpreted as the system's guess at a losing strategy for go. We could then evaluate how well the system actually loses with the $\hat{z}_{new}$ strategy. All meta-mapping results reported here were evaluated in that way -- evaluating the loss on the target task after transforming the function embedding. \par
+Alternatively, we could map from language to a meta-mapping embedding, rather than inducing it from examples of the meta-mapping. This corresponds to the human ability to change behavior in response to instructions. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows for substantial flexibility within a unified framework. 
 
 %\subsection{Boolean functions}
 %As a proof of concept, we first evaluated the system on a simple task of computing boolean functions on boolean inputs. Specifically, we can imagine mapping from binary-valued input vectors to a single binary output representing the evaluation of some logical proposition on the input. We train the system to figure out how to compute the predicate from seeing a subset of the (input, output) pairs. \par   
@@ -181,14 +181,14 @@ Similarly, we could map from language to a task embedding, and then evaluate the
 \caption{From language input.}
 \label{poly_meta_map_results_language}
 \end{subfigure}
-\caption{The system generalizes to apply learned meta-mappings to new tasks, and to apply unlearned meta-mappings, either from examples (\subref{poly_meta_map_results_examples}) or from language cues (\subref{poly_meta_map_results_language}). This shows the loss produced when evaluating the mapped embedding on the target task. For example, if the initial polynomial is $p(x) = x + 1$, and the meta-task is ``square,'' the loss would be evaluated by taking the embedding produced by applying this meta-mapping to the embedding of $f(x)$ and evaluating how the mapped embedding regresses $p(x)^2 = x^2 + 2x + 1$. The solid line indicates optimal performance; the dashed line indicates chance (untrained). Error-bars are bootstrap 95\%-CIs.} 
+\caption{The system generalizes to apply learned meta-mappings to new tasks, and to apply unlearned meta-mappings, either from examples (\subref{poly_meta_map_results_examples}) or from language cues (\subref{poly_meta_map_results_language}). The plots show the loss produced when evaluating the mapped embedding on the target task. For example, if the initial polynomial is $p(x) = x + 1$, and the meta-task is ``square,'' the loss would be evaluated by taking the embedding produced by applying this meta-mapping to the embedding of $p(x)$ and evaluating how well the mapped embedding regresses $p(x)^2 = x^2 + 2x + 1$. The solid line indicates optimal performance; the dashed line indicates chance (untrained). Error-bars are bootstrap 95\%-CIs.} 
 \label{poly_meta_map_results}
 \end{figure}
 As a proof of concept, we first evaluated the system on the task of learning polynomials of degree $\leq 2$ in 4 variables (i.e. the task was to regress functions of the form $p: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $p \in \mathcal{P}_2 \left(\mathbb{R}\right)$, though the model was given no prior inductive bias toward polynomial forms). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying polynomials by a constant, squaring them, or permuting their input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. Details of the architecture and training can be found in appendix \ref{app_detailed_methods}.\par
 \vspace{-0.7em}
 \paragraph{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out polynomial from a few data points in Fig. \ref{poly_basic_results}. \par 
 \vspace{-0.7em}
-\paragraph{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application or receiving a natural-language instruction. However, it generalizes better to new meta-mappings from examples than language, which is not completely surprising, since the examples provide a richer dataset to learn from. \par 
+\paragraph{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application or receiving a natural-language instruction. However, it performs better from examples than language, which is not completely surprising, since the examples provide a richer cue to the task. \par 
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{figures/continual/continual_learning.png}
@@ -230,8 +230,10 @@ There has also been other recent interest in task (or function) embeddings. In s
 \vspace{-1em}
 \paragraph{Future Directions:} We think that the general perspective of embedding tasks and considering meta-mappings will yield many fruitful future directions. We hope that our work will inspire more exploration of behavioral adaptation in areas beyond the simple domains we considered here. To this end, we suggest the creation of meta-learning datasets which include information not only about tasks, but about the relationships between them. For example, as we alluded to above, tasks such as visual question-answering \citep[e.g.][]{Antol2015} can be usefully interpreted from this perspective (a question essentially yields a function from images to answers, and there are many systematic relationships between these functions), as can reinforcement learning tasks which involve executing instructions \citep[e.g.][]{Hermann2017, Co-Reyes2019}. Furthermore, we think our work provides a novel perspective on the types of flexibility that human intelligence exhibits, and thus hope that it may have implications for cognitive science. \par 
 We do not necessarily believe that the particular architecture we have suggested is the best architecture for addressing these problems generally, although it has a number of desirable characteristics. However, because of the way the architecture is modularized, it is relatively easy to change any aspect of it without altering the others. In particular, although we only considered task networks $F$ that are feed-forward and of a fixed depth, this could be replaced with a recurrent architecture to allow more adaptive computation, or even a more complex architecture \citep[e.g.][]{Reed2015, Graves2016}. Our work also opens the possibility of doing unsupervised learning over function representations for further learning, which relates to long-standing ideas in cognitive science about how humans represent knowledge \citep{Clark1993}. \par 
-\vspace{-1em}
-\paragraph{Conclusions:} In this paper, we've highlighted a new type of flexibility in the form of \emph{meta-mappings}, that is, mappings between tasks. We've suggested that achieving this type of flexibility is difficult in most deep learning architectures, because they separate computation from the knowledge of what is being computed. To address this, we've proposed explicitly representing the tasks by embeddings, and deriving the computation from these embeddings via a HyperNetwork. This allows transformations over task embeddings to transform the system's behavior. To this end, we've proposed a meta-learning system which embeds tasks and data into a shared latent space, and then meta-learns to make mappings over this space. The requisite meta-task sample complexity is small; we showed generalization to unseen meta-mappings after training on only 20 meta-mappings.\par
+%\vspace{-1em}
+%\paragraph{Conclusions:}
+\section{Conclusions}
+In this paper, we've highlighted a new type of flexibility in the form of \emph{meta-mappings}, that is, mappings between tasks. We've suggested that achieving this type of flexibility is difficult in most deep learning architectures, because they separate computation from the knowledge of what is being computed. To address this, we've proposed explicitly representing the tasks by embeddings, and deriving the computation from these embeddings via a HyperNetwork. This allows transformations over task embeddings to transform the system's behavior. To this end, we've proposed a meta-learning system which embeds tasks and data into a shared latent space, and then meta-learns to make mappings over this space. The requisite meta-task sample complexity is small; we showed generalization to unseen meta-mappings after training on only 20 meta-mappings.\par
 We see our proposal as a logical progression from the fundamental idea of meta-learning -- that there is a continuum between data and tasks. This naturally leads to the idea of manipulating task representations just like we manipulate data. We've shown that this approach yields considerable flexibility, most importantly the meta-mapping ability to adapt zero-shot to a new task. We've also shown that our approach provides a useful perspective on continual learning. We hope that these results will lead to the development of more powerful and flexible deep-learning models. \par
 %\subsubsection*{Acknowledgements}
 %We would like to acknowledge Noah Goodman, Surya Ganguli, Katherine Hermann, Erin Bennett, and Arianna Yuan for stimulating questions and suggestions on this project.
@@ -450,7 +452,47 @@ Untrained EML network & Held out & 5.968 & 4.967 & 6.975 \\
 \caption{Table for basic meta-learning, figure \ref{poly_basic_results}}
 \end{table}
 
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} ccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+named\_run\_type & result\_type & mean\_loss & boot\_CI\_low & boot\_CI\_high \\ 
+\hline \\[-1.8ex] 
+EML & Trained mapping, on trained task & 0.084 & 0.08 & 0.088 \\ 
+EML & Trained mapping, on held-out task & 1.664 & 1.345 & 2.077 \\ 
+EML & Held-out mapping, on trained task & 1.07 & 0.996 & 1.14 \\ 
+EML & Held-out mapping, on held-out task & 1.52 & 1.444 & 1.604 \\ 
+Untrained EML network & Trained mapping, on trained task & 13.378 & 12.213 & 14.84 \\ 
+Untrained EML network & Trained mapping, on held-out task & 15.469 & 13.778 & 17.303 \\ 
+Untrained EML network & Held-out mapping, on trained task & 8.205 & 7.766 & 8.687 \\ 
+Untrained EML network & Held-out mapping, on held-out task & 8.625 & 8.165 & 9.127 \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\caption{Table for meta-mapping results from examples, figure \ref{poly_meta_map_results_examples}}
+\end{table}
 
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} ccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+named\_run\_type & result\_type & mean\_loss & boot\_CI\_low & boot\_CI\_high \\ 
+\hline \\[-1.8ex] 
+Language & Trained mapping, on trained task & 0.515 & 0.483 & 0.552 \\ 
+Language & Trained mapping, on held-out task & 2.244 & 1.921 & 2.623 \\ 
+Language & Held-out mapping, on trained task & 2.072 & 1.958 & 2.19 \\ 
+Language & Held-out mapping, on held-out task & 2.35 & 2.254 & 2.447 \\ 
+Untrained EML network & Trained mapping, on trained task & 13.328 & 11.977 & 14.823 \\ 
+Untrained EML network & Trained mapping, on held-out task & 15.313 & 13.602 & 17.354 \\ 
+Untrained EML network & Held-out mapping, on trained task & 8.205 & 7.795 & 8.662 \\ 
+Untrained EML network & Held-out mapping, on held-out task & 8.625 & 8.131 & 9.104 \\ 
+\hline \\[-1.8ex] 
+\end{tabular}
+\caption{Table for meta-mapping results from language, figure \ref{poly_meta_map_results_language}}
+\end{table}
 
 \subsection{Cards}
 \begin{table}[H]
