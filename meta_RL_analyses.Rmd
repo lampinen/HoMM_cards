@@ -337,8 +337,7 @@ summary_plot(reward_d %>%
   facet_wrap(. ~ named_run_type) +
   geom_hline(yintercept=mean(optimal_baselines$expected_reward),
              alpha=0.5) +
-  labs(x = "Epoch after introducing new tasks") +
-  theme(plot.margin=margin(t=0.24, b=1.7, unit="cm"))
+  labs(x = "Epoch after introducing new tasks") 
   
 ggsave("writing/figures/basic_meta_learning_integrating_over_time.png", width=4.2, height=3)
 ```

@@ -145,20 +145,28 @@ where $f_{D_1}$ is the transformation the meta-learner guesses for the training 
 This system can be trained end-to-end if labels are provided for the second set of inputs $D_2$. In particular, suppose we have some loss function $\mathfrak{L}(y, \hat{y})$ defined on a single target output $y$ and actual model output $\hat{y}$, for some input $x$. We define our total loss computed on some dataset $D_2$ as:
 \[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathfrak{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
 However, the system is not limited to simply mapping inputs to outputs. The key advantage of our architecture is that it allows transforming anything that is embedded in $Z$ using the same system. For example, suppose we have some task embedding $z_{old} \in Z$, and a meta-mapping embedding $z_{\text{meta}} \in Z$, e.g. from $z_{\text{meta}} = \mathcal{M}\left( \left\{\left((z_{source,0},z_{target,0}, ...\right) \right\}\right)$. Then we can generate a new task embedding $\hat{z}_{new} \in Z$ as:  
-\[\hat{z}_{new} = f_{z_{\text{function}}}(z_{old}) \qquad \text{where } f_{z_{\text{function}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{meta}}\right)\]
-For example, if the $z_{old}$ is the system's embedding for trying to win at go, and $z_{meta}$ is the meta-task of switching to trying to lose a game, then $\hat{z}_{new}$ could be interpreted as the system's guess at a losing strategy for go. We could then evaluate how well the system actually loses with the $\hat{z}_{new}$ strategy. \par
+\[\hat{z}_{new} = f_{z_{\text{function}}}(z_{old}) \qquad \text{where } f_{z_{\text{meta}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{meta}}\right)\]
+For example, if the $z_{old}$ is the system's embedding for trying to win at go, and the meta-dataset consists of examples of a winning strategy and a losing strategy for different games, then $\hat{z}_{new}$ could be interpreted as the system's guess at a losing strategy for go. We could then evaluate how well the system actually loses with the $\hat{z}_{new}$ strategy. \par
 Similarly, we could map from language to a task embedding, and then evaluate the system at the specified task. The key feature of our architecture -- the fact that tasks, data, and language are all embedded in a shared space -- allows substantial flexibility within a unified framework. 
 
 %\subsection{Boolean functions}
 %As a proof of concept, we first evaluated the system on a simple task of computing boolean functions on boolean inputs. Specifically, we can imagine mapping from binary-valued input vectors to a single binary output representing the evaluation of some logical proposition on the input. We train the system to figure out how to compute the predicate from seeing a subset of the (input, output) pairs. \par   
 %We can then train the system to do various meta-mappings, for example identifying certain types of functions (like XOR) or negating predicates. \par
 %
-\section{Learning multivariate polynomials}
+\section{Learning multivariate polynomials} \label{sec_poly}
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{figures/poly/basic_results.png}
-\caption{The system solves the meta-learning problem and successfully generalizes to held out tasks. The solid line indicates optimal performance; the dashed line indicates chance performance (an untrained model). Error-bars throughout are bootstrap 95\%-confidence intervals.}
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/poly/basic_results.png}
+\caption{The polynomials domain, section \ref{sec_poly}.}
 \label{poly_basic_results}
+\end{subfigure}%
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/basic_meta_learning.png}
+\caption{The cards domain, section \ref{sec_cards}.}
+\label{cards_basic_results}
+\end{subfigure}%
+\caption{The EML system succeeds at the basic meta-learning tasks, which are a necessary prerequisite for meta-mappings. (\subref{poly_basic_results}) Basic meta-learning in the polynomials domain, section \ref{sec_poly}. The system successfully generalizes to held out polynomials. The solid line indicates optimal performance; the dashed line indicates chance performance (an untrained model). (\subref{cards_basic_results}) Basic meta-learning in the cards domain, section \ref{sec_cards}. The system successfully generalizes to held out games, both when trained on a random sample of half the tasks, or when a targeted subset is held out. The gray dashed line indicates chance performance, while the solid lines are optimal performance. The colored dashed lines show how well the system could perform by playing the strategy from the most correlated trained task. The fact that it generally exceeds this difficult baseline shows a deeper form of generalization than just memorizing a few strategies and picking the closest. Error-bars throughout are bootstrap 95\%-confidence intervals, numerical values for plots can be found in appendix \ref{app_numerical_results}.}
 \end{figure}
 
 \begin{figure}
@@ -173,14 +181,14 @@ Similarly, we could map from language to a task embedding, and then evaluate the
 \caption{From language input.}
 \label{poly_meta_map_results_language}
 \end{subfigure}
-\caption{The system generalizes to apply learned meta-mappings to new tasks, and to apply unlearned meta-mappings, either from examples (\subref{poly_meta_map_results_examples}) or from language cues (\subref{poly_meta_map_results_language}). The solid line indicates optimal performance; the dashed line indicates chance (untrained). Error-bars are bootstrap 95\%-CIs.} 
+\caption{The system generalizes to apply learned meta-mappings to new tasks, and to apply unlearned meta-mappings, either from examples (\subref{poly_meta_map_results_examples}) or from language cues (\subref{poly_meta_map_results_language}). This shows the loss produced when evaluating the mapped embedding on the target task. For example, if the initial polynomial is $p(x) = x + 1$, and the meta-task is ``square,'' the loss would be evaluated by taking the embedding produced by applying this meta-mapping to the embedding of $f(x)$ and evaluating how the mapped embedding regresses $p(x)^2 = x^2 + 2x + 1$. The solid line indicates optimal performance; the dashed line indicates chance (untrained). Error-bars are bootstrap 95\%-CIs.} 
 \label{poly_meta_map_results}
 \end{figure}
 As a proof of concept, we first evaluated the system on the task of learning polynomials of degree $\leq 2$ in 4 variables (i.e. the task was to regress functions of the form $p: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $p \in \mathcal{P}_2 \left(\mathbb{R}\right)$, though the model was given no prior inductive bias toward polynomial forms). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying polynomials by a constant, squaring them, or permuting their input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. Details of the architecture and training can be found in appendix \ref{app_detailed_methods}.\par
 \vspace{-0.7em}
 \paragraph{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out polynomial from a few data points in Fig. \ref{poly_basic_results}. \par 
 \vspace{-0.7em}
-\paragraph{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application or receiving a natural-language instruction. \par 
+\paragraph{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application or receiving a natural-language instruction. However, it generalizes better to new meta-mappings from examples than language, which is not completely surprising, since the examples provide a richer dataset to learn from. \par 
 \begin{figure}
 \centering
 \includegraphics[width=\textwidth]{figures/continual/continual_learning.png}
@@ -193,25 +201,11 @@ A very simple solution to these problems is naturally suggested by our architect
 To test this idea, we pre-trained the system on 100 polynomial tasks, and then introduced 100 new tasks. We trained on these new tasks by starting from the meta-network's ``guess'' at the correct task embedding, and then optimizing this embedding without altering the other parameters. The results are shown in fig. \ref{poly_continual_results}. The meta-network embeddings offer good immediate performance, and substantially accelerate the optimization process, compared to a randomly-initialized embedding (see supp. fig. \ref{supp_poly_continual_results} for a more direct comparison). Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network. \par 
 
 
-\section{A stochastic learning setting: simple card games}
-\begin{figure}
-\centering
-\begin{subfigure}[t]{0.5\textwidth}
-\includegraphics[width=\textwidth]{figures/basic_meta_learning.png}
-\caption{Generalization to held-out tasks.}
-\label{cards_basic_results}
-\end{subfigure}%
-\begin{subfigure}[t]{0.5\textwidth}
-\includegraphics[width=\textwidth]{figures/basic_meta_learning_integrating_over_time.png}
-\caption{Rapid integration once held-out tasks are introduced.}
-\label{cards_basic_integration_results}
-\end{subfigure}
-\caption{Basic meta learning in the cards domain. (a) The system successfully generalizes to held out tasks, both when trained on a random sample of half the tasks, or when a targeted subset is held out. The gray dashed line indicates chance performance, while the solid lines are optimal performance. The colored dashed lines show how well the system could perform by playing the strategy from the most correlated trained task. The fact that it generally exceeds this difficult baseline shows a deeper form of generalization than just memorizing a few strategies and picking the closest. (b) The system can rapidly adapt to new tasks. (This figure shows the effect of training all parameters while replaying old tasks, unlike the continual learning strategy above.) Error-bars are bootstrap 95\%-CIs.}
-\end{figure}
+\section{A stochastic learning setting: simple card games}\label{sec_cards}
 We next explored the setting of simple card games, where the agent is dealt a hand and must bet. There is no action besides betting, and depending on the opponent's hand the agent either wins or loses the amount bet. This doesn't require long term planning, but does incorporate some aspects of reinforcement learning, namely stochastic feedback on only the action chosen. We considered five games that are simplified analogs of various real card games (see Appendix \ref{meth_data_cards}). We also considered several binary options that could be applied to the games, including trying to lose instead of trying to win, or switching which suit was more valuable. These are challenging manipulations, for instance trying to lose requires completely inverting a learned $Q$-function. \par
 In order to adapt the EML architecture, we made a very simple change. Instead of providing the system with (input, target) tuples to embed, we provided it with (state, action, reward) tuples, and trained it via a DQN-like approach \citep{Mnih2015} to predict rewards for each bet in each state. (A full RL framework is not strictly necessary here because there is no temporal aspect to the tasks; however, we saw it as a useful proof of concept.) The hand is explicitly provided to the network for each example, but which game is being played is implicitly captured in the training examples, without any explicit cues. That is, the system must learn to play directly from seeing a set of (state, action, reward) tuples which implicitly capture the structure and stochasticity of the game. We also trained the system on meta-tasks, such as to identifying the various types of games and options, and to make meta-mappings, for example switching from trying to win a game to trying to lose. Details of the architecture and training can be found in appendix \ref{app_detailed_methods}. \par
 \vspace{-0.7em}
-\paragraph{Basic meta learning:} First, we show that the system is able to achieve the basic goal of playing a held-out game from examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. Note that the sample complexity in terms of number of trained tasks is not that high, even training on 20 randomly selected tasks leads to good generalization to the held-out tasks. Furthermore, the task embeddings generated by the system are organized by the features of the games, see appendix \ref{app_cards_tsne}. Finally, the system can integrate new tasks rapidly (fig. \ref{cards_basic_integration_results}).\par
+\paragraph{Basic meta learning:} First, we show that the system is able to achieve the basic goal of playing a held-out game from examples in Fig. \ref{cards_basic_results}. We compare two different possible hold-out sets: 1) train on half the tasks at random, or 2) specifically hold out all the ``losers'' variations of the ``straight flush'' game. In either of these cases, the meta-learning system achieves well above chance performance (0) at the held out tasks, although it is slightly worse at generalizing to the targeted hold out, despite having more training tasks in that case. Note that the sample complexity in terms of number of trained tasks is not that high, even training on 20 randomly selected tasks leads to good generalization to the held-out tasks. Furthermore, the task embeddings generated by the system are organized by the features of the games, see appendix \ref{app_cards_tsne}. \par
 \vspace{-0.7em}
 \paragraph{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior. For example, if the system is trained to map games to their losers variations, it can generalize this mapping to a game it has not been trained to map, even if the source or target of that mapping is held out from training. In Fig. \ref{cards_meta_map_results}) we demonstrate this by taking the mapped embedding and evaluating the reward received by playing the targeted game with it. This task is more difficult than simply learning to play a held out game from examples, because the system will actually receive no examples of the target game (when it is held out). Furthermore, in the case of the losers mapping, leaving the strategy unchanged would produce a large negative reward, and chance performance would produce 0 reward, so the results are quite good. \par
 \begin{figure}
@@ -383,6 +377,7 @@ $\mathcal{M}$ batch size & 50 & 128 & 768 \\\hline
 \end{table}
 See table \ref{supp_hyperparameter_table} for detailed architectural description and hyperparameters for each experiment. Hyperparameters were generally found by a heuristic search, where mostly only the optimizer, learning rate annealing schedule, and number of training epochs were varied, not the architectural parameters. Some of the parameters take the values they do for fairly arbitrary reasons, e.g. the continual learning experiments were run with the current polynomial hyperparameters before the hyperparameter search for the polynomial data was complete, so some parameters are altered between these. \par
 Each epoch consisted of a separate learning step on each task (both base and meta), in a random order. In each task, the meta-learner would receive only a subset (the ``batch size`` above) of the examples to generate a function embedding, and would have to generalize to the remainder of the examples in the dataset. The embeddings of the tasks for the meta-learner were computed once per epoch, so as the network learned over the course of the epoch, these embeddings would get ``stale,'' but this did not seem to be too detrimental. \par 
+The results reported in the figures in this paper are averages across multiple runs, with different trained and held-out tasks (in the polynomial case) and different network initializations (in all cases), to ensure the robustness of the findings. \par 
 
 \subsection{Source repositories}
 The full code for the experiments and analyses can be found on github:
@@ -418,8 +413,43 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \label{supp_poly_continual_results}
 \end{figure}
 
-\section{Numerical results}
-In this section we provide the mean values and bootstrap confidence intervals corresponding to the major figures in the paper, as well as the baseline results in those figures. Tables were generated with stargazer \citep{Hlavac2018}.
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/poly/basic_results_over_time.png}
+\caption{The polynomials domain, section \ref{sec_poly}.}
+\label{supp_poly_integration_results}
+\end{subfigure}%
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/basic_meta_learning_integrating_over_time.png}
+\caption{The cards domain, section \ref{sec_cards}.}
+\label{supp_cards_integration_results}
+\end{subfigure}%
+\caption{Integrating new tasks into the system by training all parameters results in some initial interference with prior tasks (even with replay), suggesting that an approach like the continual learning-approach may be useful.}
+\label{supp_integration_results}
+\end{figure}
+
+\section{Numerical results} \label{app_numerical_results}
+In this section we provide the mean values and bootstrap confidence intervals corresponding to the major figures in the paper, as well as the baseline results in those figures. Tables were generated with stargazer \citep{Hlavac2018}. \par
+
+\subsection{Polynomials}
+\begin{table}[H]
+\scriptsize
+\centering
+\begin{tabular}{@{\extracolsep{5pt}} ccccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_run\_type & is\_new & mean\_loss & boot\_CI\_low & boot\_CI\_high \\
+\hline \\[-1.8ex]
+EML & Trained & 0.014 & 0.011 & 0.017 \\
+EML & Held out & 0.218 & 0.153 & 0.291 \\
+Untrained EML network & Trained & 5.735 & 4.787 & 6.787 \\
+Untrained EML network & Held out & 5.968 & 4.967 & 6.975 \\
+\hline \\[-1.8ex]
+\end{tabular}
+\caption{Table for basic meta-learning, figure \ref{poly_basic_results}}
+\end{table}
+
 
 
 \subsection{Cards}
