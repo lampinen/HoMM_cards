@@ -186,7 +186,7 @@ Alternatively, we could map from language to a meta-mapping embedding, rather th
 \end{figure}
 As a proof of concept, we first evaluated the system on the task of learning polynomials of degree $\leq 2$ in 4 variables (i.e. the task was to regress functions of the form $p: \mathbb{R}^4 \rightarrow \mathbb{R}$ where $p \in \mathcal{P}_2 \left(\mathbb{R}\right)$, though the model was given no prior inductive bias toward polynomial forms). This yields an infinite family of base-level tasks (the vector space of all such polynomials), as well as many families of meta-mappings over tasks (for example, multiplying polynomials by a constant, squaring them, or permuting their input variables). This allows us to not only examine the ability of the system to learn to learn polynomials from data, but also to adapt its learned representations in accordance with these meta-tasks. Details of the architecture and training can be found in appendix \ref{app_detailed_methods}.\par
 \vspace{-0.7em}
-\paragraph{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out polynomial from a few data points in Fig. \ref{poly_basic_results}. \par 
+\paragraph{Basic meta learning:} First, we show that the system is able to achieve the basic goal of learning a held-out polynomial from a few data points in Fig. \ref{poly_basic_results}. Furthermore, it is able to do this in a sample-efficient manner, see supp. fig. \ref{supp_poly_sweep_results}. \par 
 \vspace{-0.7em}
 \paragraph{Meta mapping (task $\rightarrow$ task):} Furthermore, the system is able to perform meta-mappings (mappings over tasks) in order to flexibly reconfigure its behavior, as shown in fig. \ref{poly_meta_map_results}. We train the system to perform a variety of mappings, for example switch the first two inputs of the polynomial, add 3 to the polynomial, or square the polynomial. We then test its ability to generalize to held-out mappings, for example a permutation of the polynomial inputs which it has not encountered before, or an additive shift in the polynomial which it has not been trained on. The system is both able to apply its learned meta-mappings to held-out tasks, and to apply meta-mappings it has not been trained on, simply by seeing examples of their application or receiving a natural-language instruction. However, it performs better from examples than language, which is not completely surprising, since the examples provide a richer cue to the task. \par 
 \begin{figure}
@@ -410,7 +410,14 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \section{Supplemental figures}
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.66\textwidth]{figures/continual/continual_learning_direct_comparison.png}
+\includegraphics[width=\textwidth]{figures/poly/basic_results_sweeping.png}
+\caption{The system is able to infer polynomials from only seeing a few data points (i.e. evaluations of the polynomial), despite the fact that during training it always saw 50. A minimum of 15 random points is needed to correctly infer polynomials without prior knowledge of the polynomial distribution, but the system is performing well below this value, and quite well above it, although it continues to refine its estimates slightly when given more data.}
+\label{supp_poly_sweep_results}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/continual/continual_learning_direct_comparison.png}
 \caption{Once the meta-learning system has been trained on a distribution of prior tasks, its performance on new tasks can be tuned by caching its guessed embeddings for the tasks and then optimizing those, thus avoiding any possibility of interfering with performance on prior tasks. Starting with the guessed embedding substantially speeds-up the process compared to a randomly-initialized embedding. Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network.}
 \label{supp_poly_continual_results}
 \end{figure}
