@@ -81,7 +81,7 @@ The model is trained to minimize
 where $\mathfrak{L}$ is $\ell_2$ loss, and $f_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
 \[f_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left((z_{source},z_{target}\right) \in D_1 \right\}\right)\right)\]
 Note that there are two kinds of hold-out in the training of this system. First, some of the trained tasks are held-out on each training step (i.e. $D_2$), in order to force the system to generalize rather than just memorize. Second, there are truly held-out tasks that the system has never seen in training, these are the held-out tasks and meta-mappings that we evaluate on at the end of training. \par
-\textbf{Language-cued meta-tasks:} The procedure is analogous to the meta-tasks from examples, except that the input to $\mathcal{H}$ is the embedding of the language input, rather than the output of $\mathcal{M}$. \par
+\textbf{Language-cued meta-tasks:} The procedure is analogous to the meta-tasks from examples, except that the input to $\mathcal{H}$ is the embedding of the language input, rather than the output of $\mathcal{M}$. The systems that were trained from language were also trained with the example-based meta-tasks.\par
 
 
 
@@ -153,6 +153,13 @@ The full code for the experiments and analyses can be found on github:
 \includegraphics[width=\textwidth]{figures/poly/basic_results_sweeping.png}
 \caption{The system is able to infer polynomials from only seeing a few data points (i.e. evaluations of the polynomial), despite the fact that during training it always saw 50. A minimum of 15 random points is needed to correctly infer polynomials without prior knowledge of the polynomial distribution, but the system is performing well below this value, and quite well above it, although it continues to refine its estimates slightly when given more data.}
 \label{supp_poly_sweep_results}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/base_learning_curves.png}
+\caption{Learning curves for basic regression in the polynomials domain.}
+\label{supp_poly_basic_learning_curves}
 \end{figure}
 
 \begin{figure}[H]
