@@ -1,5 +1,5 @@
 \appendix
-
+The supplemental material is organized as follows: in section \ref{app_detailed_methods} we list details fo the datasets and architectures we used, as well as providing links to the source code for all models, experiments, and analyses. In section \ref{app_cards_tsne} we show $t$-sne results for the cards domain. In section \ref{app_supp_figures} we provide supplemental figures. In section \ref{app_lesion_results} we provide some lesion studies. In section \ref{app_numerical_results} we provide means and bootstrap CIs corresponding to the major figures in the paper. 
 \section{Detailed methods} \label{app_detailed_methods}
 \subsection{Datasets}
 \subsubsection{Polynomials} \label{meth_data_poly}
@@ -162,8 +162,7 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \label{fig_cards_tsne_full}
 \end{figure}
 
-
-\section{Supplemental figures}
+\section{Supplemental figures} \label{app_supp_figures}
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/poly/basic_results_sweeping.png}
@@ -194,7 +193,7 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \label{supp_integration_results}
 \end{figure}
 
-\section{Lesion experiments}
+\section{Lesion experiments} \label{app_lesion_results}
 
 \subsection{Hyper network vs. conditioned task network}
 Instead of having the task network $F$ parameterized by the hyper network $\mathcal{H}$, we could simply have a task network with learned weights which takes a task embedding as another input. Here, we show that this architecture fails to learn the meta-mapping tasks, although it can successfully perform the basic tasks. We suggest that this is because it is harder for this architecture to prevent interference between the comparatively larger number of basic tasks and the smaller number of meta-tasks. While it might be possible to succeed with this architecture, it was more difficult in the hyper-parameter space we searched.\par 
@@ -218,10 +217,10 @@ In this section we provide the mean values and bootstrap confidence intervals co
 \hline \\[-1.8ex]
 named\_run\_type & is\_new & mean\_loss & boot\_CI\_low & boot\_CI\_high \\
 \hline \\[-1.8ex]
-EML & Trained & 0.014 & 0.011 & 0.017 \\
-EML & Held out & 0.218 & 0.153 & 0.291 \\
-Untrained EML network & Trained & 5.735 & 4.787 & 6.787 \\
-Untrained EML network & Held out & 5.968 & 4.967 & 6.975 \\
+EML & Trained & 0.015 & 0.012 & 0.018 \\
+EML & Held out & 0.246 & 0.188 & 0.308 \\
+Untrained EML network & Trained & 5.735 & 4.823 & 6.74 \\
+Untrained EML network & Held out & 5.968 & 4.984 & 6.991 \\
 \hline \\[-1.8ex]
 \end{tabular}
 \caption{Table for basic meta-learning, figure \ref{poly_basic_results}}
@@ -230,21 +229,21 @@ Untrained EML network & Held out & 5.968 & 4.967 & 6.975 \\
 \begin{table}[H]
 \scriptsize
 \centering
-\begin{tabular}{@{\extracolsep{5pt}} ccccc} 
-\\[-1.8ex]\hline 
-\hline \\[-1.8ex] 
-named\_run\_type & result\_type & mean\_loss & boot\_CI\_low & boot\_CI\_high \\ 
-\hline \\[-1.8ex] 
-EML & Trained mapping, on trained task & 0.084 & 0.08 & 0.088 \\ 
-EML & Trained mapping, on held-out task & 1.664 & 1.345 & 2.077 \\ 
-EML & Held-out mapping, on trained task & 1.07 & 0.996 & 1.14 \\ 
-EML & Held-out mapping, on held-out task & 1.52 & 1.444 & 1.604 \\ 
-Untrained EML network & Trained mapping, on trained task & 13.378 & 12.213 & 14.84 \\ 
-Untrained EML network & Trained mapping, on held-out task & 15.469 & 13.778 & 17.303 \\ 
-Untrained EML network & Held-out mapping, on trained task & 8.205 & 7.766 & 8.687 \\ 
-Untrained EML network & Held-out mapping, on held-out task & 8.625 & 8.165 & 9.127 \\ 
-\hline \\[-1.8ex] 
-\end{tabular} 
+\begin{tabular}{@{\extracolsep{5pt}} ccccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+named\_run\_type & result\_type & mean\_loss & boot\_CI\_low & boot\_CI\_high \\
+\hline \\[-1.8ex]
+EML & Trained mapping, on trained task & 0.094 & 0.091 & 0.098 \\
+EML & Trained mapping, on held-out task & 1.721 & 1.419 & 2.115 \\
+EML & Held-out mapping, on trained task & 1.28 & 1.213 & 1.35 \\
+EML & Held-out mapping, on held-out task & 1.775 & 1.706 & 1.846 \\
+Untrained EML network & Trained mapping, on trained task & 12.998 & 11.689 & 14.381 \\
+Untrained EML network & Trained mapping, on held-out task & 15.002 & 13.39 & 16.83 \\
+Untrained EML network & Held-out mapping, on trained task & 8.36 & 7.898 & 8.833 \\
+Untrained EML network & Held-out mapping, on held-out task & 8.786 & 8.317 & 9.27 \\
+\hline \\[-1.8ex]
+\end{tabular}
 \caption{Table for meta-mapping results from examples, figure \ref{poly_meta_map_results_examples}}
 \end{table}
 
