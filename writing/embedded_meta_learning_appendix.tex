@@ -147,27 +147,19 @@ The full code for the experiments and analyses can be found on github:
 %%\item \url{https://github.com/lampinen/meta_cards} 
 %%\end{itemize}
 (will be made available in the de-anonymized version.)
-\section{Card game $t$-SNE} \label{app_cards_tsne}
-We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/basic_tsne_basic_final.png}
-\caption{$t$-SNE embedding of the function embeddings the system learned for the basic card game tasks. (Note that the pairs of nearby embeddings differ in the ``suits rule`` attribute, discussed in appendix \ref{meth_data_cards}.)} 
-\label{fig_cards_tsne_basic}
-\end{figure}%
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/basic_tsne_full_final.png}
-\caption{$t$-SNE embedding of the function embeddings the system learned for the meta tasks (basic tasks are included in the background).} 
-\label{fig_cards_tsne_full}
-\end{figure}
-
 \section{Supplemental figures} \label{app_supp_figures}
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/poly/basic_results_sweeping.png}
 \caption{The system is able to infer polynomials from only seeing a few data points (i.e. evaluations of the polynomial), despite the fact that during training it always saw 50. A minimum of 15 random points is needed to correctly infer polynomials without prior knowledge of the polynomial distribution, but the system is performing well below this value, and quite well above it, although it continues to refine its estimates slightly when given more data.}
 \label{supp_poly_sweep_results}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_learning_curves.png}
+\caption{Learning curves for meta-mappings in the polynomials domain. Although the results seem to be leveling off at the end, we found that generalization performance was slightly increasing or stable in this region, which may have interesting implications about the structure of these tasks \citep{Lampinen2019}.}
+\label{supp_poly_meta_learning_curves}
 \end{figure}
 
 \begin{figure}[H]
@@ -193,17 +185,47 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \label{supp_integration_results}
 \end{figure}
 
-\section{Lesion experiments} \label{app_lesion_results}
+\section{Card game $t$-SNE} \label{app_cards_tsne}
+We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/basic_tsne_basic_final.png}
+\caption{$t$-SNE embedding of the function embeddings the system learned for the basic card game tasks. (Note that the pairs of nearby embeddings differ in the ``suits rule`` attribute, discussed in appendix \ref{meth_data_cards}.)} 
+\label{fig_cards_tsne_basic}
+\end{figure}%
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/basic_tsne_full_final.png}
+\caption{$t$-SNE embedding of the function embeddings the system learned for the meta tasks (basic tasks are included in the background).} 
+\label{fig_cards_tsne_full}
+\end{figure}
 
-\subsection{Hyper network vs. conditioned task network}
+\section{Lesion experiments} \label{app_lesion_results}
+In this section we consider a few variations of the architecture, to justify the choices made in the paper.
+
+\subsection{Shared $Z$ vs. separate task-embedding and data-embedding space} \label{app_lesion_results_shared_z}
+Instead of having a shared $Z$ where data and tasks are embedded, why not have a separate embedding space for data, tasks, and so on? There are a few conceptual reason why we chose to have a shared $Z$, including its greater parameter efficiency, the fact that humans seem to represent our conscious knowledge of different kinds in a shared space \citep[][]{Baars2005}, and the fact that this representation could allow for zero-shot adaptation to new computational pathways through the latent space, analogously to the zero-shot language translation results reported by Johnson and colleagues \citep{Johnson2016a}. In this section, we further show that training with a separate task encoding space worsens performance, see fig. \ref{supp_lesion_shared_z_fig}. This seems to primarily be due to the fact that learning in the shared $Z$ accelerates and de-noises the learning process, see fig. \ref{supp_lesion_shared_z_learn_fig}. (It's therefore worth noting that running this model for longer could result in convergence to the same asymptotic generalization performance.) \par
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_results_unshared_vs_shared.png}
+\caption{Having a separate embedding space for tasks results in worse performance on meta-mappings. (Results are from only 1 run.)}
+\label{supp_lesion_shared_z_fig}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_learning_curves_with_separate.png}
+\caption{Having a separate embedding space for tasks results in noisier, slower learning of meta-mappings. (Results are from only 1 run.)}
+\label{supp_lesion_shared_z_learn_fig}
+\end{figure}
+
+\subsection{Hyper network vs. conditioned task network} \label{app_lesion_results_hyper}
 Instead of having the task network $F$ parameterized by the hyper network $\mathcal{H}$, we could simply have a task network with learned weights which takes a task embedding as another input. Here, we show that this architecture fails to learn the meta-mapping tasks, although it can successfully perform the basic tasks. We suggest that this is because it is harder for this architecture to prevent interference between the comparatively larger number of basic tasks and the smaller number of meta-tasks. While it might be possible to succeed with this architecture, it was more difficult in the hyper-parameter space we searched.\par 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/poly/meta_results_conditioned_vs_hyper.png}
-\caption{Conditioning the task network on the task embedding, rather than parameterizing it via a hyper network causes it to fail at the meta-mapping tasks.}
+\caption{Conditioning the task network on the task embedding, rather than parameterizing it via a hyper network causes it to fail at the meta-mapping tasks. Results are from only 2 runs.}
 \label{supp_lesion_hyper}
 \end{figure}
-
 
 \section{Numerical results} \label{app_numerical_results}
 In this section we provide the mean values and bootstrap confidence intervals corresponding to the major figures in the paper, as well as the baseline results in those figures. Tables were generated with stargazer \citep{Hlavac2018}. \par
