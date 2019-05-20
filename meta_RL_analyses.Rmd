@@ -129,7 +129,7 @@ summary_plot = function(data,  x_var, y_var, color_var, optimal_baseline_data=NU
   p = ggplot(data, aes_string(x=x_var, y=y_var, color=color_var)) +  
     geom_hline(yintercept=0., linetype=2, alpha=0.5) +
     geom_point(stat="summary", fun.y=mean, size=2) +
-    scale_color_manual(values=c("#555093", "#f38f22")) 
+    scale_color_manual(values=c("#555093", "#f38f22", "#88e1e1", "#008822"))
   
   if (!is.null(optimal_baseline_data)) {
     p = p + 
@@ -464,8 +464,8 @@ ggplot(language_d %>%
 
 ```{r}
 summary_plot(language_d %>%
-               filter(epoch == 0),
-             "game_type", "reward", "is_new_game",
+               filter(epoch == 0, run_type == "meta_batch_128"),
+             "named_game_type", "reward", "is_new_game",
              optimal_baselines) +
   facet_wrap(. ~ named_run_type) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -584,7 +584,9 @@ meta_d = meta_d %>%
          is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
   gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
-  mutate(is_new = check_if_new_game(run_type, source) | check_if_new_game(run_type, target),
+  mutate(is_new_source = check_if_new_game(run_type, source),
+         is_new_target = check_if_new_game(run_type, target),
+         is_new =  is_new_source | is_new_target,
          is_new = factor(is_new, labels=c("Trained", "Held out")),
          named_meta_task = name_meta_task(meta_task))
 ```
@@ -651,7 +653,9 @@ lang_meta_d = lang_meta_d %>%
          is_default=!(is_su_ho | is_random_ho | is_only_one)) %>%
   gather(map_str, reward, -c(run, run_type, named_run_type, epoch), -starts_with("is_")) %>%
   separate(map_str, c("meta_task", "source", "target"), sep="[\\.]+") %>%
-  mutate(is_new = check_if_new_game(run_type, source) | check_if_new_game(run_type, target),
+  mutate(is_new_source = check_if_new_game(run_type, source),
+         is_new_target = check_if_new_game(run_type, target),
+         is_new =  is_new_source | is_new_target,
          is_new = factor(is_new, labels=c("Trained", "Held out")),
          named_meta_task=name_meta_task(meta_task))
 ```
@@ -709,6 +713,50 @@ avg_lang_meta_d %>%
   mutate_at(vars(average_reward, contains("CI")), function(x) {round(x, digits=3)}) %>%
   stargazer(summary = F, rownames = F, digits=2)
 ```
+
+# Comparing different ways of performing a new task: from examples, from language, or from meta-mappings
+
+```{r}
+summary_plot(bind_rows(lang_meta_d %>%
+                         filter(epoch == 0,
+                                is_new_target & !is_new_source,
+                                meta_task == "toggle_losers",
+                                run_type == "meta_batch_128") %>%
+                         mutate(result_type = "Meta-mapping old task (language cue)") %>%
+                         select(result_type, target, run, reward) %>%
+                         rename(game_str=target),
+                       reward_d %>%                         
+                         filter(epoch == 0,
+                                is_new_game != "Trained",
+                                run_type == "basic") %>%
+                         mutate(result_type = "Examples of new task") %>%
+                         select(result_type, game_str, run, reward),
+                       language_d %>%                         
+                         filter(epoch == 0,
+                                is_new_game != "Trained",
+                                run_type == "meta_batch_128") %>%
+                         mutate(result_type = "Language directly") %>%
+                         select(result_type, game_str, run, reward),
+                       meta_d %>%
+                         filter(epoch == 0,
+                                is_new_target & !is_new_source,
+                                meta_task =="toggle_losers",
+                                run_type == "meta_batch_128") %>%
+                         mutate(result_type = "Meta-mapping old task (example cue)") %>%
+                         select(result_type, target, run, reward) %>%
+                         rename(game_str=target)) %>%
+               mutate(named_run_type = "Targeted 10% holdout",
+                      result_type=str_wrap(result_type, width=20),
+                      result_type=factor(result_type, levels=sort(unique(result_type))[c(1,3,4,2)])), # ugh
+             "result_type", "reward", "result_type") +
+  guides(color=F) +
+  labs(x="Performing from ...", y="Average reward on held-out tasks")
+
+#ggsave("~/Documents/grad/res/psych/ARRR/figures/meta_RL/language_meta.png", width=7, height=3.5)
+ggsave("writing/figures/why_meta_mapping.png", width=6, height=3)
+
+```
+
 # embeddings
 ```{r}
 library(tsne)
