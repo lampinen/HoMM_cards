@@ -1,5 +1,104 @@
 \appendix
-The supplemental material is organized as follows: in section \ref{app_detailed_methods} we list details fo the datasets and architectures we used, as well as providing links to the source code for all models, experiments, and analyses. In section \ref{app_cards_tsne} we show $t$-sne results for the cards domain. In section \ref{app_supp_figures} we provide supplemental figures. In section \ref{app_lesion_results} we provide some lesion studies. In section \ref{app_numerical_results} we provide means and bootstrap CIs corresponding to the major figures in the paper. 
+The supplemental material is organized as follows: In section \ref{app_why_meta_mapping} we discuss the value of meta-mappings in detail by comparing to other methods of performing a new task. In section \ref{app_cards_tsne} we show $t$-sne results for the cards domain. In section \ref{app_supp_figures} we provide supplemental figures. In section \ref{app_lesion_results} we provide some lesion studies. In section \ref{app_detailed_methods} we list details fo the datasets and architectures we used, as well as providing links to the source code for all models, experiments, and analyses. In section \ref{app_numerical_results} we provide means and bootstrap CIs corresponding to the major figures in the paper. \par  
+
+\section{Why meta-map from tasks to tasks?} \label{app_why_meta_mapping}
+Why are meta-mappings between tasks useful? To answer this, we consider various ways of adapting to a new task in figure \ref{fig_why_meta_mapping} (based on results from the cards domain, section \ref{sec_cards}). The system could adapt from seeing examples of the new task, but this requires going out and collecting data, which may be expensive and does not allow zero-shot adaptation. Alternatively, the system could perform the new task via a meta-mapping from a prior learned task, where the meta-mapping is either induced from examples of the meta-mapping, or from language. Finally, the system could perform a new task from language alone, if it is trained to map instructions to tasks. \par
+To address this latter possibility, we trained a version of the model where we included training the language system to produce embeddings for the basic tasks (while simultaneously training the system on all the other objectives, such as performing the tasks from examples, in order to provide the strongest possible structuring of the system's knowledge for the strongest possible comparison). We compare this model's performance at held-out tasks to that of systems learning from examples of the new task directly, or from meta-mapping, see fig. \ref{fig_why_meta_mapping}. \par 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/why_meta_mapping.png}
+\caption{Comparison of a variety of methods for performing one of the 10\% held-out tasks in the more difficult hold-out set in the cards domain. There are a number of ways the system could adapt to a new task: from seeing example of the new task, from hearing the new task described from language alone, or from leveraging its knowledge about prior tasks via meta-mappings (in this case, from the non-losers variations of the same games). The meta-mappings offer a happy medium between the other two alternatives -- they only require cached knowledge of prior tasks, rather than needing to collect experience on the task before a policy can be derived, but they outperform a system that simply tries to construct the task embedding from a description alone. Language alone is not nearly as rich a cue as knowledge of how a new task relates to prior tasks.} 
+\label{fig_why_meta_mapping}
+\end{figure}
+These results demonstrate the advantage of meta-mapping. While learning from examples is still better given enough data, it requires potentially-expensive data collection and does not allow zero-shot adaptation. Performing the new task from a language description alone uses only the implicit knowledge in the model's weights, and likely because of this it does not generalize well to the difficult held-out tasks. Meta-mapping performs substantially better, while relying only on cached prior knowledge, viz. prior task-embedding(s) and a description of the meta-mapping (either in the form of examples or natural language). That is, meta-mapping has the advantage of requiring no new data collection, like performing from language alone, but results in much better performance by leveraging a richer description of the new task constructed using the system's knowledge of a prior task and the new task's relationship to it.\par 
+
+\section{Supplemental figures} \label{app_supp_figures}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/basic_results_sweeping.png}
+\caption{The system is able to infer polynomials from only seeing a few data points (i.e. evaluations of the polynomial), despite the fact that during training it always saw 50. A minimum of 15 random points is needed to correctly infer polynomials without prior knowledge of the polynomial distribution, but the system is performing well below this value, and quite well above it, although it continues to refine its estimates slightly when given more data.}
+\label{supp_poly_sweep_results}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/base_learning_curves.png}
+\caption{Learning curves for basic regression in the polynomials domain.}
+\label{supp_poly_basic_learning_curves}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_learning_curves.png}
+\caption{Learning curves for meta-mappings in the polynomials domain. Although the results seem to be leveling off at the end, we found that generalization performance was slightly increasing or stable in this region, which may have interesting implications about the structure of these tasks \citep{Lampinen2019}.}
+\label{supp_poly_meta_learning_curves}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/continual/continual_learning_direct_comparison.png}
+\caption{Continual learning in the polynomials domain: a more direct comparison. Once the meta-learning system has been trained on a distribution of prior tasks, its performance on new tasks can be tuned by caching its guessed embeddings for the tasks and then optimizing those, thus avoiding any possibility of interfering with performance on prior tasks. Starting with the guessed embedding substantially speeds-up the process compared to a randomly-initialized embedding. Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network.}
+\label{supp_poly_continual_results}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/poly/basic_results_over_time.png}
+\caption{The polynomials domain, section \ref{sec_poly}.}
+\label{supp_poly_integration_results}
+\end{subfigure}%
+\begin{subfigure}[t]{0.5\textwidth}
+\includegraphics[width=\textwidth]{figures/basic_meta_learning_integrating_over_time.png}
+\caption{The cards domain, section \ref{sec_cards}.}
+\label{supp_cards_integration_results}
+\end{subfigure}%
+\caption{Integrating new tasks into the system by training all parameters results in some initial interference with prior tasks (even with replay), suggesting that an approach like the continual learning-approach may be useful.}
+\label{supp_integration_results}
+\end{figure}
+
+\section{Card game $t$-SNE} \label{app_cards_tsne}
+We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/basic_tsne_basic_final.png}
+\caption{$t$-SNE embedding of the function embeddings the system learned for the basic card game tasks. (Note that the pairs of nearby embeddings differ in the ``suits rule`` attribute, discussed in appendix \ref{meth_data_cards}.)} 
+\label{fig_cards_tsne_basic}
+\end{figure}%
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/basic_tsne_full_final.png}
+\caption{$t$-SNE embedding of the function embeddings the system learned for the meta tasks (basic tasks are included in the background).} 
+\label{fig_cards_tsne_full}
+\end{figure}
+
+\section{Lesion experiments} \label{app_lesion_results}
+In this section we consider a few variations of the architecture, to justify the choices made in the paper. \par
+
+\subsection{Shared $Z$ vs. separate task-embedding and data-embedding space} \label{app_lesion_results_shared_z}
+Instead of having a shared $Z$ where data and tasks are embedded, why not have a separate embedding space for data, tasks, and so on? There are a few conceptual reason why we chose to have a shared $Z$, including its greater parameter efficiency, the fact that humans seem to represent our conscious knowledge of different kinds in a shared space \citep[][]{Baars2005}, and the fact that this representation could allow for zero-shot adaptation to new computational pathways through the latent space, analogously to the zero-shot language translation results reported by Johnson and colleagues \citep{Johnson2016a}. In this section, we further show that training with a separate task encoding space worsens performance, see fig. \ref{supp_lesion_shared_z_fig}. This seems to primarily be due to the fact that learning in the shared $Z$ accelerates and de-noises the learning process, see fig. \ref{supp_lesion_shared_z_learn_fig}. (It's therefore worth noting that running this model for longer could result in convergence to the same asymptotic generalization performance.) \par
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_results_unshared_vs_shared.png}
+\caption{Having a separate embedding space for tasks results in worse performance on meta-mappings. (Results are from only 1 run.)}
+\label{supp_lesion_shared_z_fig}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_learning_curves_with_separate.png}
+\caption{Having a separate embedding space for tasks results in noisier, slower learning of meta-mappings. (Results are from only 1 run.)}
+\label{supp_lesion_shared_z_learn_fig}
+\end{figure}
+
+\subsection{Hyper network vs. conditioned task network} \label{app_lesion_results_hyper}
+Instead of having the task network $F$ parameterized by the hyper network $\mathcal{H}$, we could simply have a task network with learned weights which takes a task embedding as another input. Here, we show that this architecture fails to learn the meta-mapping tasks, although it can successfully perform the basic tasks. We suggest that this is because it is harder for this architecture to prevent interference between the comparatively larger number of basic tasks and the smaller number of meta-tasks. While it might be possible to succeed with this architecture, it was more difficult in the hyper-parameter space we searched.\par 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/poly/meta_results_conditioned_vs_hyper.png}
+\caption{Conditioning the task network on the task embedding, rather than parameterizing it via a hyper network causes it to fail at the meta-mapping tasks. Results are from only 2 runs.}
+\label{supp_lesion_hyper}
+\end{figure}
+
 \section{Detailed methods} \label{app_detailed_methods}
 \subsection{Datasets}
 \subsubsection{Polynomials} \label{meth_data_poly}
@@ -147,93 +246,6 @@ The full code for the experiments and analyses can be found on github:
 %%\item \url{https://github.com/lampinen/meta_cards} 
 %%\end{itemize}
 (will be made available in the de-anonymized version.)
-\section{Supplemental figures} \label{app_supp_figures}
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/poly/basic_results_sweeping.png}
-\caption{The system is able to infer polynomials from only seeing a few data points (i.e. evaluations of the polynomial), despite the fact that during training it always saw 50. A minimum of 15 random points is needed to correctly infer polynomials without prior knowledge of the polynomial distribution, but the system is performing well below this value, and quite well above it, although it continues to refine its estimates slightly when given more data.}
-\label{supp_poly_sweep_results}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/poly/base_learning_curves.png}
-\caption{Learning curves for basic regression in the polynomials domain.}
-\label{supp_poly_basic_learning_curves}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/poly/meta_learning_curves.png}
-\caption{Learning curves for meta-mappings in the polynomials domain. Although the results seem to be leveling off at the end, we found that generalization performance was slightly increasing or stable in this region, which may have interesting implications about the structure of these tasks \citep{Lampinen2019}.}
-\label{supp_poly_meta_learning_curves}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/continual/continual_learning_direct_comparison.png}
-\caption{Once the meta-learning system has been trained on a distribution of prior tasks, its performance on new tasks can be tuned by caching its guessed embeddings for the tasks and then optimizing those, thus avoiding any possibility of interfering with performance on prior tasks. Starting with the guessed embedding substantially speeds-up the process compared to a randomly-initialized embedding. Furthermore, this ability to learn is due to training, not simply the expressiveness of the architecture, as is shown by attempting the same with an untrained network.}
-\label{supp_poly_continual_results}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\begin{subfigure}[t]{0.5\textwidth}
-\includegraphics[width=\textwidth]{figures/poly/basic_results_over_time.png}
-\caption{The polynomials domain, section \ref{sec_poly}.}
-\label{supp_poly_integration_results}
-\end{subfigure}%
-\begin{subfigure}[t]{0.5\textwidth}
-\includegraphics[width=\textwidth]{figures/basic_meta_learning_integrating_over_time.png}
-\caption{The cards domain, section \ref{sec_cards}.}
-\label{supp_cards_integration_results}
-\end{subfigure}%
-\caption{Integrating new tasks into the system by training all parameters results in some initial interference with prior tasks (even with replay), suggesting that an approach like the continual learning-approach may be useful.}
-\label{supp_integration_results}
-\end{figure}
-
-\section{Card game $t$-SNE} \label{app_cards_tsne}
-We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of the system at the end of learning the card game tasks, to evaluate the organization of knowledge in the network. In fig. \ref{fig_cards_tsne_basic} we show these embeddings for just the basic tasks. The embeddings show systematic grouping by game attributes. In fig. \ref{fig_cards_tsne_full} we show the embeddings of the meta and basic tasks, showing the organization of the meta-tasks by type. \par 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/basic_tsne_basic_final.png}
-\caption{$t$-SNE embedding of the function embeddings the system learned for the basic card game tasks. (Note that the pairs of nearby embeddings differ in the ``suits rule`` attribute, discussed in appendix \ref{meth_data_cards}.)} 
-\label{fig_cards_tsne_basic}
-\end{figure}%
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/basic_tsne_full_final.png}
-\caption{$t$-SNE embedding of the function embeddings the system learned for the meta tasks (basic tasks are included in the background).} 
-\label{fig_cards_tsne_full}
-\end{figure}
-
-\section{Lesion experiments} \label{app_lesion_results}
-In this section we consider a few variations of the architecture, to justify the choices made in the paper.
-
-\subsection{Shared $Z$ vs. separate task-embedding and data-embedding space} \label{app_lesion_results_shared_z}
-Instead of having a shared $Z$ where data and tasks are embedded, why not have a separate embedding space for data, tasks, and so on? There are a few conceptual reason why we chose to have a shared $Z$, including its greater parameter efficiency, the fact that humans seem to represent our conscious knowledge of different kinds in a shared space \citep[][]{Baars2005}, and the fact that this representation could allow for zero-shot adaptation to new computational pathways through the latent space, analogously to the zero-shot language translation results reported by Johnson and colleagues \citep{Johnson2016a}. In this section, we further show that training with a separate task encoding space worsens performance, see fig. \ref{supp_lesion_shared_z_fig}. This seems to primarily be due to the fact that learning in the shared $Z$ accelerates and de-noises the learning process, see fig. \ref{supp_lesion_shared_z_learn_fig}. (It's therefore worth noting that running this model for longer could result in convergence to the same asymptotic generalization performance.) \par
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/poly/meta_results_unshared_vs_shared.png}
-\caption{Having a separate embedding space for tasks results in worse performance on meta-mappings. (Results are from only 1 run.)}
-\label{supp_lesion_shared_z_fig}
-\end{figure}
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/poly/meta_learning_curves_with_separate.png}
-\caption{Having a separate embedding space for tasks results in noisier, slower learning of meta-mappings. (Results are from only 1 run.)}
-\label{supp_lesion_shared_z_learn_fig}
-\end{figure}
-
-\subsection{Hyper network vs. conditioned task network} \label{app_lesion_results_hyper}
-Instead of having the task network $F$ parameterized by the hyper network $\mathcal{H}$, we could simply have a task network with learned weights which takes a task embedding as another input. Here, we show that this architecture fails to learn the meta-mapping tasks, although it can successfully perform the basic tasks. We suggest that this is because it is harder for this architecture to prevent interference between the comparatively larger number of basic tasks and the smaller number of meta-tasks. While it might be possible to succeed with this architecture, it was more difficult in the hyper-parameter space we searched.\par 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/poly/meta_results_conditioned_vs_hyper.png}
-\caption{Conditioning the task network on the task embedding, rather than parameterizing it via a hyper network causes it to fail at the meta-mapping tasks. Results are from only 2 runs.}
-\label{supp_lesion_hyper}
-\end{figure}
-
 \section{Numerical results} \label{app_numerical_results}
 In this section we provide the mean values and bootstrap confidence intervals corresponding to the major figures in the paper, as well as the baseline results in those figures. Tables were generated with stargazer \citep{Hlavac2018}. \par
 
