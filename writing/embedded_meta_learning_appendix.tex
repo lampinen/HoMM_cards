@@ -169,9 +169,9 @@ Any combination of these options can be applied to any of the 5 games, yielding 
 \item The system is trained end-to-end to minimize the loss on these outputs.
 \end{enumerate}
 The model is trained to minimize 
-\[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathfrak{L}\left(y, \mathcal{O}\left(f_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
-where $f_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
-\[f_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_i\right), \mathcal{T}\left(y_i\right) \right) \text{ for } (x_i, y_i) \in D_1 \right\}\right)\right)\]
+\[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathfrak{L}\left(y, \mathcal{O}\left(F_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
+where $F_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
+\[F_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_i\right), \mathcal{T}\left(y_i\right) \right) \text{ for } (x_i, y_i) \in D_1 \right\}\right)\right)\]
 \textbf{Meta-task operation:}
 \begin{enumerate}
 \item A meta-dataset of (source-task-embedding, target-task-embedding) pairs, $D_1$, is collected. Another dataset $D_2$ (possibly only source tasks) is provided.
@@ -180,9 +180,9 @@ where $f_{D_1}$ is the transformation the meta-learner guesses for the training 
 \item The system is trained to minimize $\ell_2$ loss between these mapped embeddings and the target embeddings. 
 \end{enumerate}
 The model is trained to minimize
-\[\mathbb{E}_{(z_{source}, z_{target})\in {D}_2} \left[ \mathfrak{L}\left(z_{target}, f_{D_1}\left(\mathcal{I} \left(z_{source}\right)\right) \right)\right]\]
-where $\mathfrak{L}$ is $\ell_2$ loss, and $f_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
-\[f_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left((z_{source},z_{target}\right) \in D_1 \right\}\right)\right)\]
+\[\mathbb{E}_{(z_{source}, z_{target})\in {D}_2} \left[ \mathfrak{L}\left(z_{target}, F_{D_1}\left(\mathcal{I} \left(z_{source}\right)\right) \right)\right]\]
+where $\mathfrak{L}$ is $\ell_2$ loss, and $F_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
+\[F_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left((z_{source},z_{target}\right) \in D_1 \right\}\right)\right)\]
 Note that there are two kinds of hold-out in the training of this system. First, some of the trained tasks are held-out on each training step (i.e. $D_2$), in order to force the system to generalize rather than just memorize. Second, there are truly held-out tasks that the system has never seen in training, these are the held-out tasks and meta-mappings that we evaluate on at the end of training. \par
 \textbf{Language-cued meta-tasks:} The procedure is analogous to the meta-tasks from examples, except that the input to $\mathcal{H}$ is the embedding of the language input, rather than the output of $\mathcal{M}$. The systems that were trained from language were also trained with the example-based meta-tasks.\par
 
