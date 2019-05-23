@@ -1,5 +1,5 @@
 \appendix
-The supplemental material is organized as follows: In section \ref{app_clarifying_meta_mapping} we clarify some definitional details, and discuss the value of meta-mappings in detail by comparing to other methods of performing a new task. In section \ref{app_cards_tsne} we show $t$-sne results for the cards domain. In section \ref{app_supp_figures} we provide supplemental figures. In section \ref{app_lesion_results} we provide some lesion studies. In section \ref{app_detailed_methods} we list details fo the datasets and architectures we used, as well as providing links to the source code for all models, experiments, and analyses. In section \ref{app_numerical_results} we provide means and bootstrap CIs corresponding to the major figures in the paper. \par  
+The supplemental material is organized as follows: In section \ref{app_clarifying_meta_mapping} we clarify some definitional details, and discuss the value of meta-mappings in detail by comparing to other methods of performing a new task. In section \ref{app_supp_figures} we provide supplemental figures. In section \ref{app_cards_tsne} we show $t$-sne results for the cards domain. In section \ref{app_lesion_results} we provide some lesion studies. In section \ref{app_detailed_methods} we list details fo the datasets and architectures we used, as well as providing links to the source code for all models, experiments, and analyses. In section \ref{app_numerical_results} we provide means and bootstrap CIs corresponding to the major figures in the paper. \par  
 
 \section{Clarifying meta-mapping} \label{app_clarifying_meta_mapping}
 \subsection{Why meta-map from tasks to tasks?} \label{app_why_meta_mapping}
@@ -189,8 +189,7 @@ The model is trained to minimize
 \[\mathbb{E}_{(z_{source}, z_{target})\in {D}_2} \left[ \mathfrak{L}\left(z_{target}, F_{D_1}\left(\mathcal{I} \left(z_{source}\right)\right) \right)\right]\]
 where $\mathfrak{L}$ is $\ell_2$ loss, and $F_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
 \[F_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left((z_{source},z_{target}\right) \in D_1 \right\}\right)\right)\]
-Note that there are three kinds of hold-out in the training of this system, see section 
-ref{app_clarifying_holdouts}. \par
+Note that there are three kinds of hold-out in the training of this system, see section \ref{app_clarifying_holdouts}. \par
 \textbf{Language-cued meta-tasks:} The procedure is analogous to the meta-tasks from examples, except that the input to $\mathcal{H}$ is the embedding of the language input, rather than the output of $\mathcal{M}$. The systems that were trained from language were also trained with the example-based meta-tasks.\par
 
 
