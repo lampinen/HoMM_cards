@@ -1,7 +1,7 @@
 \appendix
 The supplemental material is organized as follows: In section \ref{app_clarifying_meta_mapping} we clarify some definitional details, and discuss the value of meta-mappings in detail by comparing to other methods of performing a new task. In section \ref{app_cards_tsne} we show $t$-sne results for the cards domain. In section \ref{app_supp_figures} we provide supplemental figures. In section \ref{app_lesion_results} we provide some lesion studies. In section \ref{app_detailed_methods} we list details fo the datasets and architectures we used, as well as providing links to the source code for all models, experiments, and analyses. In section \ref{app_numerical_results} we provide means and bootstrap CIs corresponding to the major figures in the paper. \par  
 
-\section{Clarifying meta-mappings} \label{app_clarifying_meta_mapping}
+\section{Clarifying meta-mapping} \label{app_clarifying_meta_mapping}
 \subsection{Why meta-map from tasks to tasks?} \label{app_why_meta_mapping}
 Why are meta-mappings between tasks useful? To answer this, we consider various ways of adapting to a new task in figure \ref{fig_why_meta_mapping} (based on results from the cards domain, section \ref{sec_cards}). The system could adapt from seeing examples of the new task, but this requires going out and collecting data, which may be expensive and does not allow zero-shot adaptation. Alternatively, the system could perform the new task via a meta-mapping from a prior learned task, where the meta-mapping is either induced from examples of the meta-mapping, or from language. Finally, the system could perform a new task from language alone, if it is trained to map instructions to tasks. \par
 To address this latter possibility, we trained a version of the model where we included training the language system to produce embeddings for the basic tasks (while simultaneously training the system on all the other objectives, such as performing the tasks from examples, in order to provide the strongest possible structuring of the system's knowledge for the strongest possible comparison). We compare this model's performance at held-out tasks to that of systems learning from examples of the new task directly, or from meta-mapping, see fig. \ref{fig_why_meta_mapping}. \par 
@@ -18,9 +18,9 @@ When we discussed meta-mappings in the main task, we equivocated between tasks a
 There are several distinct types of hold-outs in the basic training of our architecture:
 \begin{enumerate}
 \item On each basic task, some of the data ($D_1$) is fed to the meta-network $\mathcal{M}$ while some ($D_2$) is held out. This encourages the model to actually infer the underlying function, rather than just memorizing the examples.
-\item There are also truly held-out tasks that the system has never seen in training. These are the held-out tasks that we evaluate on at the end of training and report results.
+\item There are also truly held-out tasks that the system has never seen in training. These are the held-out tasks that we evaluate on at the end of training and that are plotted in the ``Held out'' sections in the main plots.
 \end{enumerate}
-This applies analogously to the meta-mappings: each time a meta-mapping is trained, some basic tasks are used as examples while others are held out to encourage generalization. There are also meta-mappings which have never been encountered during training, and those are the meta-mappings we evaluate on at hte end of training. We also evaluate the old (and new) meta-mappings on the new basic tasks that have never been trained.
+This applies analogously to the meta-mappings: each time a meta-mapping is trained, some basic tasks are used as examples while others are held out to encourage generalization. There are also meta-mappings which have never been encountered during training, which we evaluate on at the end of training, those are the meta-mappings which are plotted in the ``held out'' section in the relevant plots. We also evaluate the old (and new) meta-mappings on the new basic tasks that have never been trained. \par
 
 \section{Supplemental figures} \label{app_supp_figures}
 \begin{figure}[H]
