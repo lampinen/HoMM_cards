@@ -21,7 +21,7 @@ There are several distinct types of hold-outs in the basic training of our archi
 \item There are also truly held-out tasks that the system has never seen in training. These are the held-out tasks that we evaluate on at the end of training and that are plotted in the ``Held out'' sections in the main plots.
 \end{enumerate}
 This applies analogously to the meta-mappings: each time a meta-mapping is trained, some basic tasks are used as examples while others are held out to encourage generalization. There are also meta-mappings which have never been encountered during training, which we evaluate on at the end of training, those are the meta-mappings which are plotted in the ``held out'' section in the relevant plots. We also evaluate the old (and new) meta-mappings on the new basic tasks that have never been trained. \par
-
+\newpage
 \section{Supplemental figures} \label{app_supp_figures}
 \begin{figure}[H]
 \centering
@@ -82,11 +82,13 @@ We performed $t$-SNE \citep{LaurensvanderMaaten2008} on the task embeddings of t
 \label{fig_cards_tsne_full}
 \end{figure}
 
-\section{Lesion experiments} \label{app_lesion_results}
+\section{Architecture experiments} \label{app_lesion_results}
 In this section we consider a few variations of the architecture, to justify the choices made in the paper. \par
 
 \subsection{Shared $Z$ vs. separate task-embedding and data-embedding space} \label{app_lesion_results_shared_z}
 Instead of having a shared $Z$ where data and tasks are embedded, why not have a separate embedding space for data, tasks, and so on? There are a few conceptual reason why we chose to have a shared $Z$, including its greater parameter efficiency, the fact that humans seem to represent our conscious knowledge of different kinds in a shared space \citep[][]{Baars2005}, and the fact that this representation could allow for zero-shot adaptation to new computational pathways through the latent space, analogously to the zero-shot language translation results reported by Johnson and colleagues \citep{Johnson2016a}. In this section, we further show that training with a separate task encoding space worsens performance, see fig. \ref{supp_lesion_shared_z_fig}. This seems to primarily be due to the fact that learning in the shared $Z$ accelerates and de-noises the learning process, see fig. \ref{supp_lesion_shared_z_learn_fig}. (It's therefore worth noting that running this model for longer could result in convergence to the same asymptotic generalization performance.) \par
+\subsection{Hyper network vs. conditioned task network} \label{app_lesion_results_hyper}
+Instead of having the task network $F$ parameterized by the hyper network $\mathcal{H}$, we could simply have a task network with learned weights which takes a task embedding as another input. Here, we show that this architecture fails to learn the meta-mapping tasks, although it can successfully perform the basic tasks. We suggest that this is because it is harder for this architecture to prevent interference between the comparatively larger number of basic tasks and the smaller number of meta-tasks. While it might be possible to succeed with this architecture, it was more difficult in the hyper-parameter space we searched.\par 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/poly/meta_results_unshared_vs_shared.png}
@@ -99,9 +101,6 @@ Instead of having a shared $Z$ where data and tasks are embedded, why not have a
 \caption{Having a separate embedding space for tasks results in noisier, slower learning of meta-mappings. (Results are from only 1 run.)}
 \label{supp_lesion_shared_z_learn_fig}
 \end{figure}
-
-\subsection{Hyper network vs. conditioned task network} \label{app_lesion_results_hyper}
-Instead of having the task network $F$ parameterized by the hyper network $\mathcal{H}$, we could simply have a task network with learned weights which takes a task embedding as another input. Here, we show that this architecture fails to learn the meta-mapping tasks, although it can successfully perform the basic tasks. We suggest that this is because it is harder for this architecture to prevent interference between the comparatively larger number of basic tasks and the smaller number of meta-tasks. While it might be possible to succeed with this architecture, it was more difficult in the hyper-parameter space we searched.\par 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figures/poly/meta_results_conditioned_vs_hyper.png}
@@ -180,10 +179,10 @@ where $F_{D_1}$ is the transformation the meta-learner guesses for the training 
 \[F_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_i\right), \mathcal{T}\left(y_i\right) \right) \text{ for } (x_i, y_i) \in D_1 \right\}\right)\right)\]
 \textbf{Meta-task operation:}
 \begin{enumerate}
-\item A meta-dataset of (source-task-embedding, target-task-embedding) pairs, $D_1$, is collected. Another dataset $D_2$ (possibly only source tasks) is provided.
+\item A meta-dataset of (source-task-embedding, target-task-embedding) pairs, $D_1$, is collected. Another dataset $D_2$ (possibly only source tasks) is provided. (All embeddings included in $D_1$ during training are for basic tasks that have themselves been trained, to ensure that there is useful signal. During evaluation, the embeddings in $D_1$ are for tasks that have been trained on, but those in $D_2$ may be new.
 \item The meta network $\mathcal{M}$ maps this set of (source, target) task-embedding pairs to a function embedding.
 \item The hyper network $\mathcal{H}$ maps the function embedding to parameters for $F$, which is used to transform the second set of inputs to a set of output embeddings.
-\item The system is trained to minimize $\ell_2$ loss between these mapped embeddings and the target embeddings. 
+\item The system is trained to minimize $\ell_2$ loss between these mapped embeddings and the target embeddings.  
 \end{enumerate}
 The model is trained to minimize
 \[\mathbb{E}_{(z_{source}, z_{target})\in {D}_2} \left[ \mathfrak{L}\left(z_{target}, F_{D_1}\left(\mathcal{I} \left(z_{source}\right)\right) \right)\right]\]
