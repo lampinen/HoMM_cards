@@ -14,7 +14,13 @@ When we discussed meta-mappings in the main task, we equivocated between tasks a
 \caption{Comparison of a variety of methods for performing one of the 10\% held-out tasks in the more difficult hold-out set in the cards domain. There are a number of ways the system could adapt to a new task: from seeing example of the new task, from hearing the new task described from language alone, or from leveraging its knowledge about prior tasks via meta-mappings (in this case, from the non-losers variations of the same games). The meta-mappings offer a happy medium between the other two alternatives -- they only require cached knowledge of prior tasks, rather than needing to collect experience on the task before a policy can be derived, but they outperform a system that simply tries to construct the task embedding from a description alone. Language alone is not nearly as rich a cue as knowledge of how a new task relates to prior tasks.} 
 \label{fig_why_meta_mapping}
 \end{figure}
-
+\subsection{Clarifying hold-outs} \label{app_clarifying_holdouts}
+There are several distinct types of hold-outs in the basic training of our architecture:
+\begin{enumerate}
+\item On each basic task, some of the data ($D_1$) is fed to the meta-network $\mathcal{M}$ while some ($D_2$) is held out. This encourages the model to actually infer the underlying function, rather than just memorizing the examples.
+\item There are also truly held-out tasks that the system has never seen in training. These are the held-out tasks that we evaluate on at the end of training and report results.
+\end{enumerate}
+This applies analogously to the meta-mappings: each time a meta-mapping is trained, some basic tasks are used as examples while others are held out to encourage generalization. There are also meta-mappings which have never been encountered during training, and those are the meta-mappings we evaluate on at hte end of training. We also evaluate the old (and new) meta-mappings on the new basic tasks that have never been trained.
 
 \section{Supplemental figures} \label{app_supp_figures}
 \begin{figure}[H]
@@ -183,7 +189,8 @@ The model is trained to minimize
 \[\mathbb{E}_{(z_{source}, z_{target})\in {D}_2} \left[ \mathfrak{L}\left(z_{target}, F_{D_1}\left(\mathcal{I} \left(z_{source}\right)\right) \right)\right]\]
 where $\mathfrak{L}$ is $\ell_2$ loss, and $F_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
 \[F_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left((z_{source},z_{target}\right) \in D_1 \right\}\right)\right)\]
-Note that there are two kinds of hold-out in the training of this system. First, some of the trained tasks are held-out on each training step (i.e. $D_2$), in order to force the system to generalize rather than just memorize. Second, there are truly held-out tasks that the system has never seen in training, these are the held-out tasks and meta-mappings that we evaluate on at the end of training. \par
+Note that there are three kinds of hold-out in the training of this system, see section 
+ref{app_clarifying_holdouts}. \par
 \textbf{Language-cued meta-tasks:} The procedure is analogous to the meta-tasks from examples, except that the input to $\mathcal{H}$ is the embedding of the language input, rather than the output of $\mathcal{M}$. The systems that were trained from language were also trained with the example-based meta-tasks.\par
 
 
