@@ -81,38 +81,39 @@ To address these challenges, we propose EML architectures, which are composed of
 \end{enumerate}
 \vspace{-0.75em}
 Why have a completely shared space $Z$ for data and tasks? The primary advantage is that it allows for arbitrary mappings between these entities. In addition to basic tasks, the system could in principle learn to perform meta-mappings to follow instructions or change behavior. \par
-Without training on meta-mappings, of course, the system will not be able to execute them well. However, if it is trained on a broad enough set of such mappings, it will be able to generalize to new instances drawn from the same data/task distribution, as we demonstrate below. For instances that fall outside its data distribution, or for optimal performance, it may require some retraining, however. This reflects the structure of human behavior -- we are able to learn rapidly when new knowledge is relatively consistent with our previous knowledge, but learning an entirely new paradigm (such as calculus for a new student) can be quite slow \citep[cf.][]{Kumaran2016, Botvinick2019}. \par 
+Without training on meta-mappings, of course, the system will not be able to execute them well. However, if it is trained on a broad enough set of such mappings, it will be able to generalize to new instances drawn from the same meta-task distribution, as we demonstrate below. For instances that fall outside its data distribution, or for optimal performance, it may require some retraining, however. This reflects the structure of human behavior -- we are able to learn rapidly when new knowledge is relatively consistent with our previous knowledge, but learning an entirely new paradigm (such as calculus for a new student) can be quite slow \citep[cf.][]{Kumaran2016, Botvinick2019}. \par 
 \begin{figure}
 \centering
 \begin{tikzpicture}[auto, scale=0.75]
-\node [dashblock] at (0, 0) (rep) {\begin{tabular}{c}$\bm{Z}$: \textbf{Shared} \\ \textbf{representation}\end{tabular}};
+\node [dashblock] at (0.2, 0) (rep) {\begin{tabular}{c}$\bm{Z}$: \textbf{Shared} \\ \textbf{representation}\end{tabular}};
 
 % inputs, outputs
 
 \draw [boundingbox] (-9, -5) rectangle (-2.1, 5); 
 \node [text=gray] at (-8.5, 4.65) {\textbf{I/O}};
 
-\node [conc] at (-7, -4) (perc) {\textbf{Input}};
+\node [conc] at (-7, -3.5) (perc) {\textbf{Input}};
 %%\node [conc] at (-7.25, -2.5) (lang) {\textbf{Language}};
-\node [conc] at (-7, 4) (act) {\textbf{Output}};
-\node [block, text width=2cm] at (-4.5, -2) (IE) {$\bm{\mathcal{I}}$: \textbf{Input encoder}};
+\node [conc] at (-7.2, 4) (act) {\textbf{Output}};
+\node [conc] at (-7.2, 2.8) (tar) {\textbf{Targets}};
+\node [block, text width=2cm] at (-4, -2) (IE) {$\bm{\mathcal{I}}$: \textbf{Input encoder}};
 %%\node [block, text width=2cm] at (-5, -0.5) (LE) {$\bm{\mathcal{L}}$: \textbf{Lang. Encoder}};
-\node [block, text width=2.2cm] at (-4, 2.5) (OD) {$\bm{\mathcal{O}}$: \textbf{Output decoder}};
-\node [block, text width=2cm] at (-5.5, 1) (TE) {$\bm{\mathcal{T}}$: \textbf{Target encoder}};
-\path [line] (perc.north) to (IE.south);
+\node [block, text width=2.2cm] at (-4, 3) (OD) {$\bm{\mathcal{O}}$: \textbf{Output decoder}};
+\node [block, text width=2cm] at (-4, 1.5) (TE) {$\bm{\mathcal{T}}$: \textbf{Target encoder}};
+\path [line] (perc.north) to (IE.west);
 %%\path [line] (lang.north) to ([xshift=0.05cm, yshift=0.05cm]LE.south west);
-\path [line] ([xshift=-0.05cm, yshift=-0.05cm]IE.north east) to (rep.south west);
+\path [line] (IE.east) to (rep.south west);
 %%\path [line] (LE.east) to (rep.west);
 \path [line] (rep.north west) to ([xshift=-0.05cm, yshift=0.05cm]OD.south east);
-\path [line] (OD.north) to (act.south);
-\path [line] (act.south) to (TE.north);
+\path [line] (OD.north) to (act.east);
+\path [line] (tar.south) to (TE.west);
 \path [line] (TE.east) to (rep.north west);
 
 % meta
 \draw [boundingbox] (-1.9, 5) rectangle (6, -5); 
 \node [text=gray] at (-0.4, 4.7) {\textbf{Meta Learner}};
 
-\node [dashblock] at (0, -2.5) (collection) {
+\node [dashblock] at (0.2, -2.5) (collection) {
 \(\left\{
 \begin{matrix}
 (z_{in,0}, z_{out,0}),\\
@@ -123,14 +124,14 @@ $\vdots$
 \path [line] ([xshift=-1em]rep.south) to (collection);
 \path [line] ([xshift=1em]rep.south) to (collection);
 
-\node [block] at (4, 0) (meta) {\begin{tabular}{c}$\bm{\mathcal{M}}$: \textbf{Meta} \\ \textbf{network}\end{tabular}};
+\node [block] at (4.2, 0) (meta) {\begin{tabular}{c}$\bm{\mathcal{M}}$: \textbf{Meta} \\ \textbf{network}\end{tabular}};
 \path [line] (collection.south) to [out=-90, in=-90] (meta.south);
 \path [line] (meta.west) to (rep.east);
 
 % hyper
 
-\node [block] at (4, 3) (hyper) {\begin{tabular}{c}$\bm{\mathcal{H}}$: \textbf{Hyper} \\ \textbf{network}\end{tabular}};
-\node [block, dash pattern=on 9pt off 2pt] at (0, 2) (transform) {\(F: \text{rep} \rightarrow \text{rep}\)};
+\node [block] at (4.2, 3) (hyper) {\begin{tabular}{c}$\bm{\mathcal{H}}$: \textbf{Hyper} \\ \textbf{network}\end{tabular}};
+\node [block, dash pattern=on 9pt off 2pt] at (0.2, 2) (transform) {\(F: \bm{Z} \rightarrow \bm{Z}\)};
 
 \path [draw, ->, very thick] (rep.north east) to (hyper.south);
 \path [draw, ->, very thick] (hyper.west) to (transform.north east);
@@ -261,7 +262,7 @@ We see our proposal as a logical progression from the fundamental idea of meta-l
 
 \newpage
 % comment the following to compile without appendix but with references
-\include{embedded_meta_learning_appendix}
+%\include{embedded_meta_learning_appendix}
 
 
 \end{document}
