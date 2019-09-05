@@ -26,13 +26,16 @@
 \usetikzlibrary{shapes,arrows}
 
 \tikzstyle{block} = [rectangle, draw, thick, align=center, rounded corners]
-\tikzstyle{boundingbox} = [very thick, dotted, gray]
+\tikzstyle{boundingbox} = [thick, lightgray]
 \tikzstyle{dashblock} = [rectangle, draw, thick, align=center, dashed]
 \tikzstyle{conc} = [ellipse, draw, thick, dashed, align=center]
 \tikzstyle{netnode} = [circle, draw, very thick, inner sep=0pt, minimum size=0.5cm]
 \tikzstyle{relunode} = [rectangle, draw, very thick, inner sep=0pt, minimum size=0.5cm]
 \tikzstyle{line} = [draw, very thick, -latex']
-\tikzstyle{arrow} = [draw, ->, very thick]
+\tikzstyle{arrow} = [draw, ->, thick]
+
+\definecolor{bpurp}{HTML}{984ea3}
+\definecolor{bblue}{HTML}{377eb8}
 
 \setlength{\parskip}{1em}
 \setlength{\parindent}{0em}
@@ -87,76 +90,27 @@ Why have a completely shared space $Z$ for individual data points and tasks? The
 Without training on meta-mappings, of course, the system will not be able to execute them well. However, if it is trained on a broad enough set of such mappings, it will be able to generalize to new instances drawn from the same meta-task distribution, as we demonstrate below. For instances that fall outside its data distribution, or for optimal performance, it may require some retraining, however. This reflects the structure of human behavior -- we are able to learn rapidly when new knowledge is relatively consistent with our previous knowledge, but learning an entirely new paradigm (such as calculus for a new student) can be quite slow \citep[cf.][]{Kumaran2016, Botvinick2019}. \par 
 \begin{figure}
 \centering
-\begin{subfigure}[b]{0.72\textwidth}
-\begin{tikzpicture}[auto, scale=0.66, every node/.style={scale=0.85}]
-\node [dashblock] at (0.2, 0) (rep) {\begin{tabular}{c}$\bm{Z}$: Shared \\ representation\end{tabular}};
+\begin{tikzpicture}[scale=0.8, every node/.style={scale=0.8}]
+%% basic meta learning
+\begin{scope}[shift={(0.4, 0.4)}]
+\draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
+\end{scope}
+\begin{scope}[shift={(0.2, 0.2)}]
+\draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
+\end{scope}
 
-% inputs, outputs
-
-\draw [boundingbox] (-9, -5) rectangle (-2.1, 5); 
-\node [text=gray] at (-8.5, 4.65) {\textbf{I/O}};
-
-\node [conc] at (-7, -3.5) (perc) {Input};
-%%\node [conc] at (-7.25, -2.5) (lang) {Language};
-\node [conc] at (-7.2, 4) (act) {Output};
-\node [conc] at (-7.2, 2.8) (tar) {Targets};
-\node [block, text width=2cm] at (-4, -2) (IE) {$\bm{\mathcal{I}}$: Input encoder};
-%%\node [block, text width=2cm] at (-5, -0.5) (LE) {$\bm{\mathcal{L}}$: \textbf{Lang. Encoder}};
-\node [block, text width=2.2cm] at (-4, 3) (OD) {$\bm{\mathcal{O}}$: Output decoder};
-\node [block, text width=2cm] at (-4, 1.5) (TE) {$\bm{\mathcal{T}}$: Target encoder};
-\path [line] (perc.north) to (IE.west);
-%%\path [line] (lang.north) to ([xshift=0.05cm, yshift=0.05cm]LE.south west);
-\path [line] (IE.east) to (rep.south west);
-%%\path [line] (LE.east) to (rep.west);
-\path [line] (rep.north west) to ([xshift=-0.05cm, yshift=0.05cm]OD.south east);
-\path [line] (OD.north) to (act.east);
-\path [line] (tar.south) to (TE.west);
-\path [line] (TE.east) to (rep.north west);
-
-% meta
-\draw [boundingbox] (-1.9, 5) rectangle (5.85, -5); 
-\node [text=gray] at (-0.4, 4.7) {\textbf{Meta Learner}};
-
-\node [dashblock] at (0.2, -2.5) (collection) {
-\(\left\{
-\begin{matrix}
-(z_{in,0}, z_{out,0}),\\
-(z_{in,1}, z_{out,1}),\\
-$\vdots$
-\end{matrix}\right\}\)};
-\path [line] (rep.south) to (collection);
-\path [line] ([xshift=-1em]rep.south) to (collection);
-\path [line] ([xshift=1em]rep.south) to (collection);
-
-\node [block] at (4.2, 0) (meta) {\begin{tabular}{c}$\bm{\mathcal{M}}$: Meta \\ network\end{tabular}};
-\path [line] (collection.south) to [out=-90, in=-90] (meta.south);
-\path [line] (meta.west) to (rep.east);
-
-% hyper
-
-\node [block] at (4.2, 3) (hyper) {\begin{tabular}{c}$\bm{\mathcal{H}}$: Hyper \\ network\end{tabular}};
-\node [block, dash pattern=on 9pt off 2pt] at (0.2, 2) (transform) {\(F: \bm{Z} \rightarrow \bm{Z}\)};
-
-\path [draw, ->, very thick] (rep.north east) to (hyper.south);
-\path [draw, ->, very thick] (hyper.west) to (transform.north east);
-\path [draw, ->, very thick] ([xshift=-1em]transform.south) to ([xshift=-1em]rep.north);
-\path [draw, ->, very thick] ([xshift=1em]rep.north) to ([xshift=1em]transform.south);
-
-\end{tikzpicture}
-\caption{Schematic of the architecture}
-\end{subfigure}%
-\begin{subfigure}[b]{0.28\textwidth}
-\begin{tikzpicture}[auto, scale=0.66, every node/.style={scale=0.85}]
-\node at (-1.5, -3.6) (examples) {Examples};
-\node at (-1.5, -2.5) (D1) {
+\draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
+\node[lightgray] at (-1.45, 2.9) {Basic meta-learning};
+\node at (-1.5, -4) (examples) {Examples};
+\node at (-1.5, -3.2) (D1) {
 \(\left\{
 \begin{matrix}
 (z^{ex}_{in,0}, z^{ex}_{targ,0})\\
 $\vdots$
 \end{matrix}\right\}\)};
 
-\node at (1.5, -3.6) (examples) {Probes};
-\node at (1.5, -2.5) (D2) {
+\node at (1.5, -4) (probes) {Probes};
+\node at (1.5, -3.2) (D2) {
 %\(z^{prb}_{in}\)};
 \(\left\{
 \begin{matrix}
@@ -164,13 +118,17 @@ z^{prb}_{in,0}\\
 $\vdots$
 \end{matrix}\right\}\)};
 
-\node at (-0.33, -0.66) (zfunc) {\(z^{func}\)};
+\node [block] at (-1.5, -1.75) (M) {\(\mathcal{M}\)};
+\path [arrow] ([yshift=-5]D1.north) to (M);
 
-\path [arrow] (D1) to [in=-145, out=90] ([xshift=3, yshift=3]zfunc.south west) node [xshift=-16, yshift=-5] {\(\mathcal{M}\)};
+\node at (-1, -0.7) (zfunc) {\(z^{func}\)};
+\path [arrow, out=90, in=-135] (M.north) to ([xshift=6,yshift=3]zfunc.south west);
 
-\node at (1.5, -0.25) (F) {\(F\)};
+\node[block] at (0, -0.25) (H) {\(\mathcal{H}\)};
+\path [arrow, out=45, in=180] ([yshift=-3]zfunc.north) to (H.west);
 
-\path [arrow, bend left] ([xshift=-5, yshift=-5]zfunc.north east) to [in=165, out=25] ([xshift=3]F.west) node [xshift=-13, yshift=5]{\(\mathcal{H}\)};
+\node [block, dashed] at (1.5, -0.25) (F) {\(F_{z^{func}}\)};
+\path[arrow] (H.east) to (F.west);
 
 \path [arrow, dashed] (D2) to (F);
 
@@ -181,38 +139,121 @@ $\vdots$
 z^{pred}_{out,0},\\
 $\vdots$
 \end{matrix}\right\}\)};
-\node at (1.5, 2.9) (predictions) {Predictions};
+\node at (1.5, 2.65) (predictions) {Predictions};
 
 \path [arrow, dashed] (F) to ([yshift=3]outputs.south);
 
-\node [align=center, text width=1.25 cm] at (-1.5, 1.75) (dispatch) {Loss or eval or ...};
+\node [align=center, text width=1.25 cm] at (-1.5, 1.75) (dispatch) {\baselineskip=12pt Loss or eval or ...\par};
 
 \path [arrow, dashed] (outputs.west) to ([xshift=-3]dispatch.east);
 
-% for spacing
 
-\node at (0, -5.5) {};
+%% meta mapping
+\begin{scope}[shift={(6.4, 2)}]
+\draw[boundingbox, draw=bpurp, fill=white] (-3, -4.3) rectangle (2.6, 3.2);
+\node[bpurp] at (-1.85, 2.9) {Meta-mapping};
+\node at (-1.5, -4) (metaexamples) {Examples};
+\node at (-1.5, -3.2) (metaD1) {
+\(\left\{
+\begin{matrix}
+(z^{func}_{in,0}, z^{func}_{targ,0})\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node at (1.5, -4) (metaprobes) {Probes};
+\node at (1.5, -3.2) (metaD2) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{func,prb}_{in,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node [block] at (-1.5, -1.75) (metaM) {\(\mathcal{M}\)};
+\path [arrow] ([yshift=-5]metaD1.north) to (metaM);
+
+\node at (-1, -0.7) (metazfunc) {\(z^{meta}\)};
+\path [arrow, out=90, in=-135] (metaM.north) to ([xshift=6,yshift=3]metazfunc.south west);
+
+\node[block] at (0, -0.25) (metaH) {\(\mathcal{H}\)};
+\path [arrow, out=45, in=180] ([yshift=-3]metazfunc.north) to (metaH.west);
+
+\node [block, dashed] at (1.5, -0.25) (metaF) {\(F_{z^{meta}}\)};
+\path[arrow] (metaH.east) to (metaF.west);
+
+\path [arrow, dashed] (metaD2) to (metaF);
+
+\node at (1.5, 1.75) (metaoutputs) {
+%\(z^{pred}_{out}\)};
+\(\left\{
+\begin{matrix}
+z^{func,pred}_{out,0},\\
+$\vdots$
+\end{matrix}\right\}\)};
+\node at (1.5, 2.65) (metapredictions) {Predictions};
+
+\path [arrow, dashed] (metaF) to ([yshift=3]metaoutputs.south);
+
+\node [align=center, text width=1.5 cm] at (-1.5, 1.75) (metadispatch) {Loss (training)};
+\path [arrow, dashed] (metaoutputs.west) to ([xshift=-3]metadispatch.east);
+\end{scope}
+\path [arrow, draw=bpurp, dotted, out=-40, in=-140] ([xshift=-1, yshift=3]zfunc.south) to ([xshift=19, yshift=3]metaD1.west);
+
+%% evaluating meta mapping
+\begin{scope}[shift={(11.8, 0)}]
+\draw[boundingbox, draw=bblue, fill=white] (-2.25, -4.3) rectangle (2.5, 3.2);
+\node[bblue, text width=2.5cm] at (-0.9, 2.75) {Meta-mapping evaluation};
+
+\node at (1.5, -4) (metaevalprobes) {Probes};
+\node at (1.5, -3.2) (metaevalD2) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{prb}_{in,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node at (-1, -0.7) (metaevalzfunc) {\(z^{func,pred}\)};
+
+\node[block] at (0, -0.25) (metaevalH) {\(\mathcal{H}\)};
+\path [arrow, out=45, in=180] ([yshift=-3]metaevalzfunc.north) to (metaevalH.west);
+
+\node [block, dashed] at (1.5, -0.25) (metaevalF) {\(F_{z^{func,pred}}\)};
+\path[arrow] (metaevalH.east) to (metaevalF.west);
+
+\path [arrow, dashed] (metaevalD2) to (metaevalF);
+
+\node at (1.5, 1.75) (metaevaloutputs) {
+%\(z^{pred}_{out}\)};
+\(\left\{
+\begin{matrix}
+z^{pred}_{out,0},\\
+$\vdots$
+\end{matrix}\right\}\)};
+\node at (1.5, 2.65) (metaevalpredictions) {Predictions};
+
+\path [arrow, dashed] (metaevalF) to ([yshift=3]metaevaloutputs.south);
+
+\node [align=center, text width=1.25 cm] at (-1.5, 1.75) (metaevaldispatch) {Loss (eval)};
+\path [arrow, dashed] (metaevaloutputs.west) to ([xshift=-3]metaevaldispatch.east);
+\end{scope}
+\path [arrow, very thick, draw=bblue, dotted, out=-30, in=160] (metaoutputs.center) to ([xshift=5, yshift=-5]metaevalzfunc.north west);
 \end{tikzpicture}
-\caption{Meta-learner inference}
-\end{subfigure}
-\caption{The EML architecture and an inference step. (a) A schematic of the architecture. Blocks with solid edges denote learnable deep networks, dashed edges represent inputs, outputs, embeddings, etc., and $F$ is a deep network with parameters specified by $\mathcal{H}$. Note that there may be multiple input, output, and target decoders if the system has multiple input modalities, e.g. both language and vision. See appendix \ref{app_model_details} for details. (b) Depiction of a meta-learner forward pass. This process is identical between basic tasks and meta-mappings, except for where the example and probe embeddings come from, and how the loss or evaluation is computed. For basic inference, the example and probe embeddings come from basic inputs and outputs, and loss is computed in the output space. For meta-mapping, the example and probe input and outputs are task embeddings of basic tasks, and loss for training is computed in the embedding space, while evaluation is done by using the predicted embedding to perform the target task.} \label{architecture_inference_fig}
+\caption{The EML architecture allows for transformations at different levels of abstraction. Basic meta-learning proceeds as in the gray box: a dataset consisting of (input, output) tuples is processed by the meta-network \(\mathcal{M}\) to produce a function embedding \(z^{func}\), which is processed by the hyper network \(\mathcal{H}\) to parameterize a function \(F_{z^{func}}\), which attempts to compute the transformation on held-out probe inputs. However, our approach goes byeond this basic meta-learning step. The function embedding \(z^{func}\) can then be seen as a single input or output at the next level of abstraction, when the same networks \(\mathcal{M}\) and \(\mathcal{H}\) are used to transform function embeddings based on examples of a meta-mapping. To evaluate meta-mapping performance, a probe embedding from a held-out funciton is transformed by the architecture to yield a predicted embedding for the transformed task. The performance of this predicted embedding is evaluated by moving back down a level of abstraction and evaluating on the actual target task. Because the function embedding is predicted by a transformation rather than computed from examples, this allows for zero-shot performance of a new task. (Blocks with solid edges denote learnable deep networks, and $F_{z}$ is a deep network parameterized by $\mathcal{H}$ conditioned on function embedding \(z\). See the text and appendix \ref{app_model_details} for further details.)} \label{architecture_inference_fig}
 \end{figure}
 \looseness=-1
 More formally, we take a \emph{functional} perspective on learning. A datum can be represented by a constant function which outputs that datum. (For example, each point in the latent space of an autoencoder can be thought of this way.) Adopting this perspective allows us to interpret model inputs or outputs as functions. Most machine learning tasks then become a mapping of functions to functions. The key insight is that, while these mappings could be over functions that represent data\footnote{Where ``data'' is a quite flexible term. The approach is agnostic to whether the learning is supervised or reinforcement learning, whether inputs are images or natural language, etc.}, they could also operate on functions that represent tasks. This is related to the idea of a homoiconicity, defined above. Under this perspective, basic tasks and meta-mappings are really the same type of problem. \par
 Specifically, we embed each input, target, or mapping into a shared representational space $Z$. This means that single data points are embedded in the same space as the representation of a functionr or an entire dataset. See appendix \ref{app_lesion_results_shared_z} for discussion of why $Z$ should be shared. Inputs are embedded by a deep network $\mathcal{I}: \text{input} \rightarrow Z$. Model outputs are decoded from $Z$ by a deep network $\mathcal{O}: Z \rightarrow \text{output}$. Target outputs are encoded by a deep network $\mathcal{T}: \text{targets} \rightarrow Z$.\par
 Given this, the task of mapping inputs to outputs can be framed as trying to find a transformation of the representational space that takes the (embedded) inputs from the training set to embeddings that will decode to the target outputs. These transformations are performed by a system with the following components (see fig. \ref{architecture_inference_fig}): $\mathcal{M}: \{(Z, Z), ...\} \rightarrow Z $ -- the meta network, which collapses a dataset of (input embedding, target embedding) pairs to produce a single function embedding. $\mathcal{H}: Z \rightarrow \text{parameters}$ -- the hyper network, which maps a function embedding to parameters. $F: Z \rightarrow Z$ -- the transformation, implemented by a deep network parameterized by $\mathcal{H}$. \par
 \vspace{-0.5em}
-\paragraph{Basic meta-learning:} To perform a basic task, a dataset $D_1$ is encoded by $\mathcal{I}$ and $\mathcal{T}$. These examples are fed to $\mathcal{M}$ to produce a function embedding. This function embedding is mapped through $\mathcal{H}$ to parameterize $F$, and then $F$ is used to process a (possibly distinct) dataset $D_2$ of embedded inputs, and $\mathcal{O}$ to map the resultant embeddings to outputs. This system can be trained end-to-end on targets for the second dataset. Having two distinct datasets forces generalization at the meta-learning level, see appendix \ref{app_clarifying_holdouts}. See appendix \ref{app_model_details} for detailed architecture, operation, and hyper-parameters. \par 
-More explicitly, suppose we have some dataset of input, target pairs ($D_1 = \{(x_0, y_0), ...\}$), and some input $x$ from some other dataset $D_2$ for which to predict an output $\hat{y}$. $\hat{y}$ would be generated as follows: 
-\[\hat{y} = \mathcal{O}\left(F_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\]
-where $F_{D_1}$ is the transformation the meta-learner guesses for the training dataset $D_1$:
-\[F_{D_1} \text{ is parameterized by } \mathcal{H}\left(\mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_0\right), \mathcal{T}\left(y_0\right) \right), \left(\mathcal{I}\left(x_1\right), \mathcal{T}\left(y_1\right) \right), ... \right\}\right)\right)\]
-This system can be trained end-to-end if labels are provided for the second set of inputs $D_2$. In particular, suppose we have some loss function $\mathfrak{L}(y, \hat{y})$ defined on a single target output $y$ and actual model output $\hat{y}$, for some input $x$. We define our total loss computed on some dataset $D_2$ as:
+\paragraph{Basic meta-learning:} To perform a basic task, input and target encoders ($\mathcal{I}$ and $\mathcal{T}$) are used to embed individual pairs from an example dataset \(D_1\), to form a dataset of example (input, output) tuples. These examples are fed to $\mathcal{M}$, which produces a function embedding (via a deep neural network including an element-wise max across the examples). This function embedding is mapped through they hyper network $\mathcal{H}$ to parameterize $F$, and then $F$ is used to process a dataset of embedded probe inputs, and $\mathcal{O}$ to map the resultant embeddings to outputs. This system can be trained end-to-end on targets for the second dataset. Having two distinct datasets forces generalization at the meta-learning level, see appendix \ref{app_clarifying_holdouts}. See appendix \ref{app_model_details} for detailed architecture, operation, and hyper-parameters. \par 
+More explicitly, suppose we have a dataset of example input, target pairs ($D_1 = \{(x_0, y_0), ...\}$), and some input $x$ from a probe dataset $D_2$ for which to predict an output $\hat{y}$. $\hat{y}$ would be generated as follows: 
+\[\hat{y} = \mathcal{O}\left(F_{z^{func}}\left(\mathcal{I} \left(x\right)\right) \right)\]
+where $F_{z^{func}}$ is the meta-learners guess at a representation for the function underlying the training dataset $D_1$:
+\[F_{z^{func}} \text{ is parameterized by } \mathcal{H}\left(z^{func}\right), \text{ where } z^{func} = \mathcal{M}\left( \left\{\left(\mathcal{I}\left(x_0\right), \mathcal{T}\left(y_0\right) \right), ... \right\}\right)\]
+This system can be trained end-to-end if labels are provided for the probe dataset $D_2$. In particular, suppose we have some loss function $\mathfrak{L}(y, \hat{y})$ defined on a single target output $y$ and actual model output $\hat{y}$, for some input $x$. We define our total loss computed on the probe dataset $D_2$ as:
 \[\mathbb{E}_{(x, y)\in {D}_2} \left[ \mathfrak{L}\left(y, \mathcal{O}\left(F_{D_1}\left(\mathcal{I} \left(x\right)\right) \right)\right)\right]\]
-%\paragraph{Meta-mapping:} However, the system is not limited to simply mapping inputs to outputs. The key advantage of our architecture is that it allows transforming anything that is embedded in $Z$ using the same system. Because tasks are embedded in $Z$, this allows for meta-mappings. For example, suppose we have an embedding $z_{go} \in Z$ for the task of playing go. We can generate a meta-mapping embedding $z_{\text{meta}} \in Z$ from examples of winning and trying-to-lose various games: $z_{\text{meta}} = \mathcal{M}\left( \left\{\left((z_{checkers},z_{checkers,lose}\right), ... \right\}\right)$. We can generate a new task embedding $\hat{z}_{new} \in Z$:  
-%\[\hat{z}_{new} = F_{z_{\text{function}}}(z_{go}) \qquad \text{where } F_{z_{\text{meta}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{meta}}\right)\]
-%This $\hat{z}_{new}$ could be interpreted as the system's guess at a losing strategy for go. We could then evaluate whether the system loses with the $\hat{z}_{new}$ strategy. All meta-mapping results reported here were evaluated in that way -- evaluating the loss on the target task after transforming the task embedding. \par
-\paragraph{Meta-mapping:} However, the system is not limited to simply mapping inputs to outputs. The fundamental insight of our paper is to show how basic tasks and meta-mappings can be treated homogenously, by allowing the network to recurse on its own representations. From the perspective of our architecture, learning a meta-mapping between tasks is exactly analogous to learning a basic task. Anything that is embedded in $Z$ can be transformed using the same system. Because tasks are embedded in $Z$ for basic meta-learning, this allows for meta-mappings using exactly the same $\mathcal{M}$ and $\mathcal{H}$ that we use for basic tasks. Just as we would take a set of paired embeddings of data points for a basic task, and use them to compute a function embedding for that task, we can take a set of paired function embeddings, and use them to create an embedding for the meta-mapping. We can then use this meta-mapping embedding to transform another task. We can thus behave zero-shot on a novel task based on its relationship to a prior task. \par
+\paragraph{Meta-mapping:} However, the system is not limited to basic meta-learning. The fundamental insight of our paper is to show how basic tasks and meta-mappings can be treated homogenously, by allowing the network to recurse on its own representations. From the perspective of our architecture, learning a meta-mapping between tasks is exactly analogous to learning a basic task. Anything that is embedded in $Z$ can be transformed using the same system. Because tasks are embedded in $Z$ for basic meta-learning, this allows for meta-mappings using exactly the same $\mathcal{M}$ and $\mathcal{H}$ that we use for basic tasks. Just as we would take a set of paired embeddings of data points for a basic task, and use them to compute a function embedding for that task, we can take a set of paired function embeddings, and use them to create an embedding for the meta-mapping. We can then use this meta-mapping embedding to transform another task. We can thus behave zero-shot on a novel task based on its relationship to a prior task. \par
 For example, suppose we have an embedding $z_{game1} \in Z$ for the task of playing some game. We can generate a meta-mapping embedding $z_{\text{meta}} \in Z$ from embeddings generated by the system when it is trying to win and lose various games: $z_{\text{meta}} = \mathcal{M}\left( \left\{\left((z_{game2},z_{game2,lose}\right), ... \right\}\right)$. We can generate a new task embedding $\hat{z}_{new} \in Z$:  
 \[\hat{z}_{new} = F_{z_{\text{meta}}}(z_{game1}) \qquad \text{where } F_{z_{\text{meta}}} \text{ is parameterized by } \mathcal{H}\left(z_{\text{meta}}\right)\]
 \looseness=-1
