@@ -151,6 +151,18 @@ def _stringify_game(t):
         
 ### simple tests
 if __name__ == "__main__":
+    # save win probs for javascript
+    for g in ["straight_flush"]:
+        for losers in [True, False]:
+            this_game = card_game(game_type=g, losers=losers)
+            with open("../../psych/cards/%s_l%i.json" % (g, losers), "w") as fout:
+                fout.write("{\n")
+                for k, v in sorted(this_game.hand_to_win_prob.items(), key= lambda x: x[1]): 
+                    hand = "h_%i_%i_%i_%i" % (k[0][0], k[0][1], k[1][0], k[1][1])
+                    fout.write(hand + ": " + str(v) + ",\n")
+                fout.write("}")
+    exit()
+
     game_types = ["high_card", "match", "pairs_and_high", "straight_flush", "sum_under"]
     suits_rule = [True, False]
     losers = [True, False]
