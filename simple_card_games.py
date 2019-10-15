@@ -124,15 +124,22 @@ class card_game(object):
             return -bet
 
 
-    def compute_expected_return(self, max_bet=2., policy=None):
+    def compute_expected_return(self, max_bet=2., policy=None, ties="win"):
         """If policy is None, computes the optimal expected return. If not,
         policy should be a dictionary indexed by hands that gives bets."""
         r = 0.
+        num_hands = len(self.hands)
         if policy is None:
             for hand in self.hands:
                 wp = self.hand_to_win_prob[hand]
                 if wp > 0.5:
-                    r += wp*max_bet - (1-wp)*max_bet
+                    if ties == "win":
+                        r += wp*max_bet - (1-wp)*max_bet
+                    elif hand[0] == hand[1]: # don't win against self 
+                        r += (wp - 1./num_hands)*max_bet - (1-wp)*max_bet
+                    else: # don't win against self or other tie
+                        r += (wp - 2./num_hands)*max_bet - (1-wp)*max_bet
+
         else:
             for hand in self.hands:
                 bet = policy[hand]

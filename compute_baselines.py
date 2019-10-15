@@ -7,7 +7,7 @@ losers = [True, False]
 black_valuable = [True, False]
 max_bet = 2.
 
-with open("baseline_data.csv", "w") as fout:
+with open("baseline_data_no_ties.csv", "w") as fout:
     fout.write("game, policy, expected_reward\n")
     for game_type in game_types:
         for sr in suits_rule:
@@ -17,7 +17,7 @@ with open("baseline_data.csv", "w") as fout:
                     name = _stringify_game(g)
                     fout.write("%s, %s, %f\n" % (name,
                                                  "optimal",
-                                                 g.compute_expected_return())) 
+                                                 g.compute_expected_return(ties="nothing"))) 
 
                     for game_type_2 in game_types:
                         for sr2 in suits_rule:
@@ -31,4 +31,4 @@ with open("baseline_data.csv", "w") as fout:
                                     fout.write("%s, %s, %f\n" % (
                                         name,
                                         name2,
-                                        g.compute_expected_return(policy=g2_policy))) 
+                                        g.compute_expected_return(policy=g2_policy, ties="nothing"))) 
