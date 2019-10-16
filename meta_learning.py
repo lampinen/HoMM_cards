@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "/mnt/fs2/lampinen/meta_RL/paper_results/joint_lnex_lw_mb_128_ne_10/",
+    "output_dir": "./results_for_humans/results/",
     "save_every": 20, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": [10, 20, 30, 50, 100, 200, 400, 800], # if not None,
@@ -95,9 +95,9 @@ config = {
     "meta_toggling": True, # if false, different tasks for turning ON or OFF
     "new_meta_tasks": [],
     
-    "train_language": True, # whether to train language as well (only language
+    "train_language": False, # whether to train language as well (only language
                             # inputs, for now)
-    "train_joint_lnex": True, # whether to train joint language + examples
+    "train_joint_lnex": False, # whether to train joint language + examples
     "language_compositional": True, # whether language should be used in more
                                     # complex way, which is nice but makes the
                                     # network's task harder

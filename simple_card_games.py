@@ -45,12 +45,12 @@ class card_game(object):
 
         def high_card_value(hand):
             if hand[0][0] == hand[1][0]:
-                return hand[0][0] + 0.5*(suit_val(hand[0]) + suit_val(hand[1])) + 0.01 * (hand[1][0])
+                return 1.1 * hand[0][0] + 0.01*(suit_val(hand[0]) + suit_val(hand[1]))
             else:
                 index = 0 if hand[0][0] > hand[1][0] else 1 
                 high_card = hand[index]
                 other_card = hand[1-index]
-                return high_card[0] + suit_val(high_card) + 0.01 * (other_card[0] + suit_val(other_card))
+                return high_card[0] + 0.1 * other_card[0] + 0.01 * (suit_val(high_card) + 0.5 * suit_val(other_card))
             
             
         if game_type == "high_card":
@@ -59,13 +59,16 @@ class card_game(object):
             def key(hand):
                 val_d = hand[0][0] - hand[1][0] 
                 suit_d = hand[0][1] - hand[1][1] 
-                tie_break = (hand[0][0] + hand[1][0] + suit_val(hand[0]) + suit_val(hand[1]))
+                index = 0 if hand[0][0] > hand[1][0] else 1 
+                high_card = hand[index]
+                other_card = hand[1-index]
+                tie_break = high_card[0] + 0.2 * other_card[0] + 0.01 *(suit_val(high_card) + 0.5 * suit_val(other_card))
                 return -np.abs(val_d) - 0.5 * np.abs(suit_d) + 0.01 * tie_break 
         elif game_type == "pairs_and_high": 
             def key(hand):
                 c0, c1 = hand
                 if c0[0] == c1[0]:
-                    return 5 + c0[0] + 0.5 * (c0[1] == c1[1])  + 0.01 * (suit_val(c0) + suit_val(c1))
+                    return 10 + c0[0] + 0.5 * (c0[1] == c1[1])  + 0.01 * (suit_val(c0) + suit_val(c1))
                 else:
                     return high_card_value(hand) 
         elif game_type == "straight_flush":
@@ -74,7 +77,8 @@ class card_game(object):
                 if np.abs(c0[0]-c1[0]) == 1:
                     index = 0 if hand[0][0] > hand[1][0] else 1 
                     high_card = hand[index]
-                    return 5 + 5 * (c0[1] == c1[1]) + high_card[0] + suit_val(high_card) 
+                    other_card = hand[1-index]
+                    return 10 + 10 * (c0[1] == c1[1]) + 2 * high_card[0] + suit_val(high_card) + 0.01 * suit_val(other_card) 
                 else:
                     return high_card_value(hand) 
         elif game_type == "sum_under":
