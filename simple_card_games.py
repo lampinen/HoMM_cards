@@ -35,7 +35,7 @@ class card_game(object):
         self.game_type = game_type
         self.black_valuable = black_valuable
         self.suits_rule = suits_rule
-        suit_mult = 0.5 if not suits_rule else 4
+        suit_mult = 0.5 if not suits_rule else 1000
         self.losers = losers
         self.cards = [(value, suit) for suit in range(2) for value in range(4)] 
         self.hands = [(c1, c2) for c1 in self.cards for c2 in self.cards]

@@ -7,7 +7,7 @@ losers = [True, False]
 black_valuable = [True, False]
 max_bet = 2.
 
-with open("baseline_data_no_ties.csv", "w") as fout:
+with open("baseline_data_for_humans_sr_fixed.csv", "w") as fout:
     fout.write("game, policy, expected_reward\n")
     for game_type in game_types:
         for sr in suits_rule:
