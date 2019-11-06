@@ -39,7 +39,7 @@ config = {
     "epsilon": 0.5,
     "init_learning_rate": 1e-4,
     "init_language_learning_rate": 1e-4,
-    "init_meta_learning_rate": 1e-4,
+    "init_meta_learning_rate": 5e-5,
 
     "new_init_learning_rate": 1e-5,
     "new_init_language_learning_rate": 1e-5,
@@ -57,7 +57,7 @@ config = {
     "refresh_meta_cache_every": 1, # how many epochs between updates to meta_cache
     "refresh_mem_buffs_every": 50, # how many epochs between updates to buffers
 
-    "max_base_epochs": 10000,
+    "max_base_epochs": 40000,
     "max_new_epochs": 1000,
     "num_task_hidden_layers": 3,
     "num_hyper_hidden_layers": 3,
@@ -66,20 +66,20 @@ config = {
                              # that because of multiplicative effects and depth
                              # impact can be dramatic.
 
-    "softmax_beta": 5, # 1/temperature on action softmax, sharpens if > 1
+    "softmax_beta": 8, # 1/temperature on action softmax, sharpens if > 1
     "task_weight_weight_mult": 1., # not a typo, the init range of the final
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "./results_for_humans/results/",
-    "save_every": 20, 
+    "output_dir": "./results_for_humans/results_6/",
+    "save_every": 200, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
-    "sweep_meta_batch_sizes": [10, 20, 30, 50, 100, 200, 400, 800], # if not None,
+    "sweep_meta_batch_sizes": None,#[10, 20, 30, 50, 100, 200, 400, 800], # if not None,
                                                                     # eval each at
                                                                     # training ends
 
     "memory_buffer_size": 1024, # How many memories of each task are stored
-    "meta_batch_size": 128, # how many meta-learner sees
+    "meta_batch_size": 768, # how many meta-learner sees
     "early_stopping_thresh": 0.05,
 #    "new_tasks": "random",
     "new_tasks": [{"game": "straight_flush", "losers": True,
@@ -110,7 +110,7 @@ config = {
 
 config["base_meta_tasks"] = ["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
 if config["meta_toggling"]:
-    config["base_meta_mappings"] = ["toggle_" + o for o in config["option_names"]]
+    config["base_meta_mappings"] = ["toggle_" + o for o in config["option_names"]] # ["losers"]] #
 else:
     config["base_meta_mappings"] = ["turnON_" + o for o in config["option_names"]] + ["turnOF_" + o for o in config["option_names"]]
 
@@ -121,7 +121,7 @@ else:
 config["base_tasks"] = [{"game": g, "losers": l, "black_valuable": b,
                          "suits_rule": s} for g in config["game_types"] for l in config["losers"] for b in config["black_valuable"] for s in config["suits_rule"]]
 np.random.seed(0) # ideally would randomly assign each run, but that wuold require a little more work for the analysis
-		  # rseed 0 doesn't work for 3/4 holdout -- one of the meta training sets is empty
+                  # rseed 0 doesn't work for 3/4 holdout -- one of the meta training sets is empty
 if config["new_tasks"] == "random":
     config["new_tasks"] = list(np.random.permutation(config["base_tasks"])[:(len(config["base_tasks"])//2)])
 config["base_tasks"] = [t for t in config["base_tasks"] if t not in config["new_tasks"]] # omit new
@@ -186,23 +186,23 @@ def _get_meta_pairings(base_tasks, meta_tasks, meta_mappings):
     meta_pairings = {mt: {"base": [], "meta": []} for mt in all_meta_tasks}
     for mt in all_meta_tasks:
         if config["meta_toggling"]:
-	    if mt[:6] == "toggle":
-		to_toggle = mt[7:]
-		for task in base_tasks: 
-		    other = deepcopy(task) 
-		    other[to_toggle] = not other[to_toggle]
-		    if other in base_tasks:
-			meta_pairings[mt]["base"].append((_stringify_game(task),
-							  _stringify_game(other)))
+            if mt[:6] == "toggle":
+                to_toggle = mt[7:]
+                for task in base_tasks: 
+                    other = deepcopy(task) 
+                    other[to_toggle] = not other[to_toggle]
+                    if other in base_tasks:
+                        meta_pairings[mt]["base"].append((_stringify_game(task),
+                                                          _stringify_game(other)))
 
-	    elif mt[:2] == "is":
-		pos_class = mt[3:]
-		for task in base_tasks: 
-		    truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
-		    meta_pairings[mt]["base"].append((_stringify_game(task),
-						      1*truth_val))
-	    else: 
-		raise ValueError("Unknown meta task: %s" % meta_task)
+            elif mt[:2] == "is":
+                pos_class = mt[3:]
+                for task in base_tasks: 
+                    truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
+                    meta_pairings[mt]["base"].append((_stringify_game(task),
+                                                      1*truth_val))
+            else: 
+                raise ValueError("Unknown meta task: %s" % meta_task)
         else:
             if mt[:4] == "turn":
                 ON_or_OFF = mt[4:6] == "ON"
@@ -1613,15 +1613,15 @@ class meta_model(object):
                                 base_lnex_rewards))
                             fout_lnex.write(curr_lnex_losses)
                             fout_lnex_reward.write(curr_lnex_rewards)
-			print(curr_losses, curr_lang_losses)
-                        if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
-                            print("Early stop!")
-                            break
-	            else:
-			print(curr_losses)
-                        if np.all(curr_losses < early_stopping_thresh):
-                            print("Early stop!")
-                            break
+                        print(curr_losses, curr_lang_losses)
+                        #if np.all(curr_losses < early_stopping_thresh) and np.all(curr_lang_losses < early_stopping_thresh):
+                        #    print("Early stop!")
+                        #    break
+                    else:
+                        print(curr_losses)
+                        #if np.all(curr_losses < early_stopping_thresh):
+                        #    print("Early stop!")
+                        #    break
 
 
                 if epoch % lr_decays_every == 0 and epoch > 0:
