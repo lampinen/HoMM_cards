@@ -71,7 +71,7 @@ config = {
                                    # hyper weights that generate the task
                                    # parameters. 
 
-    "output_dir": "./results_for_humans/results_6/",
+    "output_dir": "./results_for_humans/results_8/",
     "save_every": 200, 
     "eval_all_hands": False, # whether to save guess probs on each hand & each game
     "sweep_meta_batch_sizes": None,#[10, 20, 30, 50, 100, 200, 400, 800], # if not None,
@@ -110,7 +110,7 @@ config = {
 
 config["base_meta_tasks"] = ["is_" + g for g in config["game_types"]] + ["is_" + o for o in config["option_names"]]
 if config["meta_toggling"]:
-    config["base_meta_mappings"] = ["toggle_" + o for o in config["option_names"]] # ["losers"]] #
+    config["base_meta_mappings"] = ["toggle_losers"] #["toggle_" + o for o in config["option_names"]] # 
 else:
     config["base_meta_mappings"] = ["turnON_" + o for o in config["option_names"]] + ["turnOF_" + o for o in config["option_names"]]
 
