@@ -6,7 +6,7 @@ The supplemental material is organized as follows: In section \ref{app_clarifyin
 \subsection{Clarifying hold-outs} \label{app_clarifying_holdouts}
 There are several distinct types of hold-outs in the basic training of our architecture:
 \begin{enumerate}
-\item On each basic task, some of the data ($D_1$) is fed to the meta-network $\mathcal{M}$ while some ($D_2$) is held out. This encourages the model to actually infer the underlying function, rather than just memorizing the examples.
+\item On each basic task, some of the data ($D_1$) is fed to the meta-network as examples $\mathcal{M}$ while some probes ($D_2$) is held out. This encourages the model to actually infer the underlying function, rather than just memorizing the examples. However, the probe labels are still used in training the system end-to-end, in order to encourage it to generalize.
 \item There are also truly held-out tasks that the system has never seen in training. These are the held-out tasks that we evaluate on at the end of training and that are plotted in the ``Held out'' sections in the main plots.
 \end{enumerate}
 This applies analogously to the meta-mappings: each time a meta-mapping is trained, some basic tasks are used as examples while others are held out to encourage generalization. There are also meta-mappings which have never been encountered during training, which we evaluate on at the end of training, those are the meta-mappings which are plotted in the ``held out'' section in the relevant plots. We also evaluate the old (and new) meta-mappings on the new basic tasks that have never been trained. \par
