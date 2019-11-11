@@ -1,9 +1,9 @@
 \documentclass{article}
 
-%\PassOptionsToPackage{numbers}{natbib}
+\PassOptionsToPackage{numbers}{natbib}
 
-%\usepackage[final]{neurips_2019}
-\usepackage{iclr2020_conference,times}
+\usepackage[final]{neurips_2019}
+%\usepackage{iclr2020_conference,times}
 
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
@@ -405,8 +405,8 @@ We do not necessarily believe that the particular architecture we have suggested
 \looseness=-1
 We've highlighted a new type of flexibility in the form of meta-mapping between tasks. Meta-mapping can produce zero-shot performance on novel tasks, based on their relationship to old tasks. This is a key aspect of human flexibility. The meta-mapping perspective suggests that this flexibility requires representing tasks in a transformable way. To address this, our Homoiconic Meta-Mapping (HoMM) approach explicitly represents tasks by function embeddings, and derives the computation from these embeddings via a HyperNetwork. This allows for our key insight: by embedding tasks and individual data points in a shared latent space, the same meta-learning architecture can be used both to transform data for basic tasks, and to transform task embeddings to adapt to task variations. This approach is parsiomious, because it uses the same networks for basic- and meta-mappings. Perhaps because of this, the requisite meta-task sample complexity is small; we showed generalization to unseen meta-mappings after training on only 20 meta-mappings. That is, we are able to achieve zero-shot performance on a novel task based on a held-out relationship between tasks. Furthermore, the meta-mapping approach yields better task performance than a zero-shot approach based on performing the task based on just a natural language description. This is a step closer to human-level flexibility. \par
 We see our proposal as a logical progression from the fundamental idea of meta-learning -- that there is a continuum between data and tasks. This naturally leads to the idea of manipulating task representations just like we manipulate data. We've shown that this approach yields considerable flexibility, most importantly the meta-mapping ability to adapt zero-shot to a new task. We hope that these results will lead to the development of more powerful and flexible deep-learning models. \par
-%\subsubsection*{Acknowledgements}
-%We would like to acknowledge Noah Goodman, Surya Ganguli, Katherine Hermann, Erin Bennett, and Arianna Yuan for stimulating questions and suggestions on this project.
+\subsubsection*{Acknowledgements}
+We would like to acknowledge Noah Goodman, Surya Ganguli, Katherine Hermann, Erin Bennett, and Arianna Yuan for stimulating questions and suggestions on this project.
 
 \bibliographystyle{apalike}
 \bibliography{arrr}
