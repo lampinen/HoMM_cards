@@ -52,7 +52,7 @@ Other minor comments:
 * A term such as “Homoiconic” would have benefited from a formal definition, especially considering it’s not a commonly used term.
     There are debates about how to precisely define this term (see e.g. https://www.expressionsofchange.org/dont-say-homoiconic/), so we didn't want to wade into such a definitional conundrum. However, we provide a statement of the general agreed-upon part of the definition in the introduction.
 * The presentation is in general not well-polished, and needs revision.
-    Are there specific points that would benefit from further clarification?
+    Are there specific points that would benefit from further clarification, beyond what you have mentioned above?
 
 
 
@@ -98,7 +98,7 @@ Thanks, we weren't familiar with this very interesting work! We have added a ref
 - “Hold-out” vs “held-out”. Be consistent and use “held-out” throughout.
     We are making a grammatical distinction here -- "held-out" is an adjective and "hold-out" is a noun. That is, one might refer to a "held-out task" or to a "a hold-out." Hopefully this clarifies things.
     
-We hope that this clarifies 
+We hope that this clarifies things, and will help to address your concerns. Please let us know if further changes would be useful. 
 
 
 
@@ -130,9 +130,9 @@ Thank you for the thorough and thoughtful review. We appreciate that you think o
 
 - The major concern for this work is its lack of discussion and comparison with state-of-the-art meta-learning baselines. 
     o	In fact, the meta-mapping this work learns is the relationship between tasks, and the meta-task the authors mentioned is a group of tasks. In this sense, I strongly suggest the authors to go through the recent work [1], and compare with it. Even the datasets constructed in that paper can be used as a benchmark to validate the proposed method in image classification.
+We agree that the approach proposed there is very interesting, and have added a brief discussion of it! However, it does not consider the types of systematic relationships between tasks to which our system applies. For example, switching from winning to losing one of card games results in exactly opposite strategies, while other meta-mappings denote other types of relationships (such as switching what suit is more valuable). Hierarchical clustering cannot capture these richly structure relationships (see e.g. McClelland, Sadeghi, and Saxe (2017), "A Critique of Pure Hierarchy: Uncovering Cross-Cutting Structure in a Natural Dataset"), and hierarchically clustered or similarity based datasets alone thus do not suffice. This is part of why we suggest the construction of new datasets in the future directions.
+
     o	Other basic meta-learning algorithms like MAML[3] and many others should still be compared and discussed, especially in the basic meta-learning setting in Figure 2.
-
-
 Our main contribution is to propose a meta-mapping framework for zero-shot task performance, and parsimonious method for performing these meta-mappings. MAML as such is not a method of zero-shot task performance, it requires examples to learn from. We could therefore compare to MAML for our basic-meta-learning results, but those are simply a sanity check. We also compare to a variety of baselines, including chance and optimal performance, untransformed representations, and the most correlated task experienced (in the cards domain). However, if our paper is accepted, and you feel that the comparison to MAML for basic meta-learning is useful, we will run MAML on our tasks before the camera-ready submission.
 
 One might take inspiration from our framework try to use MAML for zero-shot task performance by transforming task representations would require adopting our meta-mapping framework, as well as a number of ideas of our architecture (where do the task representations come from, and how are they used?), and so its not clear to us that this is an appropriate baseline, rather than simply another implementation of our technique. Instead, we feel the more appropriate baseline is performing tasks from a natural language description, as many prior zero-shot works have, and so we have moved this result to the main text, as noted above.
@@ -148,7 +148,7 @@ Thanks for the useful and interesting references! We believe that it might be po
 
 `
 o Why don’t merge the results Fig. 2 and Fig. 3 and compare them in a single figure, so that the contribution of meta-mappings can be shown. 
-    We think this would be extremely misleading, since fig. 2 is meta-learning (viz. performing tasks from examples), while figure 3 is performing tasks zero-shot, without examples. We have however, moved figure 5. to the main text, which does include this comparison between performing a task zero-shot and from examples, as well as another baseline.
+    We think this would be extremely misleading, since fig. 2 is meta-learning (viz. performing tasks from examples), while figure 3 is performing tasks zero-shot, without examples. We have tried to edit the captions to clarify this. We have also moved figure 5. to the main text, which does include this comparison between performing a task zero-shot and from examples, as well as another baseline.
 
 
 o How do you train the domain-specific encoder and decoder? Are they generalizable to a wide range of more complicated tasks like image classification? 
