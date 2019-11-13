@@ -1,5 +1,7 @@
 import numpy as np
 
+from copy import deepcopy
+
 
 class card_game(object):
     """Class for creating simple card games which have 4 card values and 2 
@@ -154,6 +156,19 @@ class card_game(object):
                                              self.black_valuable, self.suits_rule)
 
 
+def stringify_game_def(game_def):
+        return "game_%s_l_%i_bv_%i_sr_%i" % (game_def["game_type"], game_def["losers"],
+                                             game_def["black_valuable"], game_def["suits_rule"])
+
+
+def game_from_def(game_def):
+    g = card_game(game_type=game_def["game_type"],
+                  black_valuable=game_def["black_valuable"],
+                  suits_rule=game_def["suits_rule"],
+                  losers=game_def["losers"])
+    return g
+
+
 def get_meta_pairings(base_train_tasks, base_eval_tasks, meta_class_train_tasks, meta_map_train_tasks):
     """Gets which tasks map to which other tasks under the meta_tasks (i.e. the
     part of the meta datasets which is precomputable)"""
@@ -166,21 +181,21 @@ def get_meta_pairings(base_train_tasks, base_eval_tasks, meta_class_train_tasks,
                 other = deepcopy(task)
                 other[to_toggle] = not other[to_toggle]
                 if other in base_train_tasks:
-                    meta_pairings[mt]["train"].append((str(task),
-                                                       str(other)))
+                    meta_pairings[mt]["train"].append((stringify_game_def(task),
+                                                       stringify_game_def(other)))
                 elif other in base_eval_tasks:
-                    meta_pairings[mt]["eval"].append((str(task),
-                                                       str(other)))
+                    meta_pairings[mt]["eval"].append((stringify_game_def(task),
+                                                       stringify_game_def(other)))
 
         elif mt[:2] == "is":
             pos_class = mt[3:]
             for task in base_train_tasks:
-                truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
-                meta_pairings[mt]["train"].append((str(task),
+                truth_val = (task["game_type"] == pos_class) or (pos_class in task and task[pos_class])
+                meta_pairings[mt]["train"].append((stringify_game_def(task),
                                                   1*truth_val))
             for task in base_eval_tasks:
-                truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
-                meta_pairings[mt]["eval"].append((str(task),
+                truth_val = (task["game_type"] == pos_class) or (pos_class in task and task[pos_class])
+                meta_pairings[mt]["eval"].append((stringify_game_def(task),
                                                   1*truth_val))
 
     return meta_pairings

@@ -19,14 +19,16 @@ run_config.update({
     "losers": [True, False],
     "black_valuable": [True, False],
 
+    "softmax_beta": 5,
+
     "bets": [0, 1, 2],
-    "new_tasks": [{"game": "straight_flush", "losers": True,
+    "new_tasks": [{"game_type": "straight_flush", "losers": True,
                   "black_valuable": False, "suits_rule": False},
-                  {"game": "straight_flush", "losers": True,
+                  {"game_type": "straight_flush", "losers": True,
                   "black_valuable": False, "suits_rule": True},
-                  {"game": "straight_flush", "losers": True,
+                  {"game_type": "straight_flush", "losers": True,
                   "black_valuable": True, "suits_rule": False},
-                  {"game": "straight_flush", "losers": True,
+                  {"game_type": "straight_flush", "losers": True,
                   "black_valuable": True, "suits_rule": True}], # will be removed
                                                                 # from base tasks
 
@@ -73,12 +75,15 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
     def _pre_build_calls(self):
         run_config = self.run_config
 
-        # set up the base tasks
-        base_tasks = [{"game": g, "losers": l, "black_valuable": b,
+        self.bets = run_config["bets"]
+
+        # set up the base task defs
+        base_tasks = [{"game_type": g, "losers": l, "black_valuable": b,
                        "suits_rule": s} for g in run_config["game_types"] for l in run_config["losers"] for b in run_config["black_valuable"] for s in run_config["suits_rule"]]
 
         self.base_train_tasks = [t for t in base_tasks if t not in run_config["new_tasks"]]
         self.base_eval_tasks = run_config["new_tasks"]
+
 
         # set up the meta tasks
         self.meta_class_train_tasks = ["is_" + g for g in run_config["game_types"]] + ["is_" + o for o in run_config["option_names"]] 
@@ -93,6 +98,24 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
             base_eval_tasks=self.base_eval_tasks,
             meta_class_train_tasks=self.meta_class_train_tasks,
             meta_map_train_tasks=self.meta_map_train_tasks) 
+
+        # convert to games
+
+        self.base_train_tasks = [simple_card_games.game_from_def(t) for t in self.base_train_tasks]
+        self.base_eval_tasks = [simple_card_games.game_from_def(t) for t in self.base_eval_tasks]
+
+
+    def fill_buffers(self, num_data_points=1024):
+        """Add new "experiences" to memory buffers."""
+        self.play_games(num_turns=num_data_points,
+                        epsilon=self.run_config["epsilon"])
+
+    def get_new_memory_buffer(self):
+        """Can be overriden by child"""
+        return HoMM_model.memory_buffer(
+            length=self.architecture_config["memory_buffer_size"],
+            input_width=self.architecture_config["input_shape"][0],
+            outcome_width=self.architecture_config["outcome_shape"][0])
 
     def encode_hand(self, hand):
         """Takes a hand tuple, returns vector appropriate for input to graph"""
@@ -192,21 +215,18 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         experiences to memory buffers."""
         this_tasks = self.base_train_tasks + self.base_eval_tasks 
         for t in this_tasks:
-            game = self.games[str(t)]
             buff = self.memory_buffers[str(t)]
-            encoded_hands = np.zeros([num_turns, 12])
+            encoded_hands = np.zeros([num_turns] + self.architecture_config["input_shape"])
             hands = []
             for turn in range(num_turns):
-                hand = game.deal()
+                hand = t.deal()
                 hands.append(hand)
                 encoded_hands[turn, :] = self.encode_hand(hand)
             acts = self.play_hands(encoded_hands, buff,
                                    epsilon=epsilon)
             bets = [self.bets[a] for a in acts]
-            rs = [game.play(h, self.bets[a]) for h, a in zip(hands, acts)]
+            rs = [t.play(h, self.bets[a]) for h, a in zip(hands, acts)]
             encoded_outcomes = self.encode_outcomes(acts, rs)
-            encoded_hands = np.concatenate([encoded_hands, encoded_games], axis=-1)
-            encoded_outcomes = np.concatenate([encoded_outcomes, encoded_games], axis=-1)
             buff.insert(encoded_hands, encoded_outcomes)
 
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
@@ -221,7 +241,7 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
     def build_feed_dict(self, task, lr=None, fed_embedding=None,
                         call_type="base_standard_train"):
         """Build a feed dict."""
-        super(cards_HoMM_model, self).build_feed_dict(
+        feed_dict = super(cards_HoMM_model, self).build_feed_dict(
             task=task, lr=lr, fed_embedding=fed_embedding, call_type=call_type)
 
         base_or_meta, call_type, train_or_eval = call_type.split("_")
