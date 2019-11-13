@@ -111,22 +111,18 @@ class card_game(object):
             else:
                 self.hand_to_win_prob[hand] = 1.0 
 
-
     def wins(self, hand):
         wp = self.hand_to_win_prob[hand]
         return np.random.rand() <= wp
 
-
     def deal(self):
         return self.hands[np.random.randint(self.num_hands)]
-
 
     def play(self, hand, bet):
         if self.wins(hand):
             return bet 
         else:
             return -bet
-
 
     def compute_expected_return(self, max_bet=2., policy=None, ties="win"):
         """If policy is None, computes the optimal expected return. If not,
@@ -153,11 +149,41 @@ class card_game(object):
         r /= len(self.hands)
         return r
 
+    def __str__(self):
+        return "game_%s_l_%i_bv_%i_sr_%i" % (self.game_type, self.losers,
+                                             self.black_valuable, self.suits_rule)
 
-def _stringify_game(t):
-    """Helper for printing, etc."""
-    return "game_%s_l_%i_bv_%i_sr_%i" % (t.game_type, t.losers,
-                                         t.black_valuable, t.suits_rule)
+
+def get_meta_pairings(base_train_tasks, base_eval_tasks, meta_class_train_tasks, meta_map_train_tasks):
+    """Gets which tasks map to which other tasks under the meta_tasks (i.e. the
+    part of the meta datasets which is precomputable)"""
+    all_meta_tasks = meta_class_train_tasks + meta_map_train_tasks
+    meta_pairings = {mt: {"train": [], "eval": []} for mt in all_meta_tasks}
+    for mt in all_meta_tasks:
+        if mt[:6] == "toggle":
+            to_toggle = mt[7:]
+            for task in base_train_tasks:
+                other = deepcopy(task)
+                other[to_toggle] = not other[to_toggle]
+                if other in base_train_tasks:
+                    meta_pairings[mt]["train"].append((str(task),
+                                                       str(other)))
+                elif other in base_eval_tasks:
+                    meta_pairings[mt]["eval"].append((str(task),
+                                                       str(other)))
+
+        elif mt[:2] == "is":
+            pos_class = mt[3:]
+            for task in base_train_tasks:
+                truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
+                meta_pairings[mt]["train"].append((str(task),
+                                                  1*truth_val))
+            for task in base_eval_tasks:
+                truth_val = (task["game"] == pos_class) or (pos_class in task and task[pos_class])
+                meta_pairings[mt]["eval"].append((str(task),
+                                                  1*truth_val))
+
+    return meta_pairings
 
         
 ### simple tests
