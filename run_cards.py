@@ -252,7 +252,7 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
         if base_or_meta == "base":
             outcomes = feed_dict[self.base_target_ph]
-            if call_type == "standard" or not self.architecture_config["persistent_task_reps"]: 
+            if call_type == "standard" or train_or_eval == "eval" or not self.architecture_config["persistent_task_reps"]: 
                 feed_dict[self.base_outcome_ph] = outcomes 
             targets, target_mask = self._outcomes_to_targets(outcomes)
             feed_dict[self.base_target_ph] = targets 
