@@ -264,14 +264,16 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
         return feed_dict
 
-    def base_eval(self, task):
+    def base_eval(self, task, train_or_eval):
         feed_dict = self.build_feed_dict(task, call_type="base_cached_eval")
         fetches = [self.total_base_loss, self.base_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
         rewards = self.reward_eval_helper(task, res[1], inputs)
         name = str(task)
-        return [name + "_loss", name + "_rewards"], [res[0], rewards] 
+        return ([name + "_loss:" + train_or_eval, 
+                 name + "_rewards:" + train_or_eval],
+                [res[0], rewards]) 
 
     def base_embedding_eval(self, embedding, task):
         feed_dict = self.build_feed_dict(task, fed_embedding=embedding, call_type="base_fed_eval")
