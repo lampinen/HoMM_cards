@@ -44,6 +44,8 @@ run_config.update({
     "min_language_learning_rate": 1e-8,
     "min_meta_learning_rate": 3e-7,
 
+    "num_epochs": 40000,
+    "eval_every": 200,
 })
 
 architecture_config = default_architecture_config.default_architecture_config
@@ -56,12 +58,14 @@ architecture_config.update({
 
     "IO_num_hidden": 64,
     "optimizer": "RMSProp",
+
+    "meta_batch_size": 768,
 })
 if False:  # enable for persistent reps
     architecture_config.update({
         "persistent_task_reps": True,
         "combined_emb_guess_weight": "varied",
-        "emb_match_loss_weight": 0.2,
+        "emb_match_loss_weight": 0.5,
     })
     run_config.update({
         "output_dir": "results_for_humans_with_library_persistent/",
