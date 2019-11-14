@@ -104,6 +104,8 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         self.base_train_tasks = [simple_card_games.game_from_def(t) for t in self.base_train_tasks]
         self.base_eval_tasks = [simple_card_games.game_from_def(t) for t in self.base_eval_tasks]
 
+        self.game_str_to_task = {str(t): t for t in self.base_train_tasks + self.base_eval_tasks}
+
 
     def fill_buffers(self, num_data_points=1024):
         """Add new "experiences" to memory buffers."""
@@ -197,13 +199,13 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
     def _pre_loss_calls(self):
         self.base_output_softmax = tf.nn.softmax(
-            self.run_config["softmax_beta"] * self.base_output)
+            self.run_config["softmax_beta"] * self.base_unmasked_output)
 
         self.base_fed_emb_output_softmax = tf.nn.softmax(
-            self.run_config["softmax_beta"] * self.base_fed_emb_output)
+            self.run_config["softmax_beta"] * self.base_fed_emb_unmasked_output)
 
         self.base_cached_emb_output_softmax = tf.nn.softmax(
-            self.run_config["softmax_beta"] * self.base_cached_emb_output)
+            self.run_config["softmax_beta"] * self.base_cached_emb_unmasked_output)
 
     def fill_buffers(self, num_data_points=1024):
         """Add new "experiences" to memory buffers."""
@@ -232,6 +234,8 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
     def reward_eval_helper(self, game, act_probs, encoded_hands=None, hands=None):
         if encoded_hands is not None:
             hands = self.decode_hands(encoded_hands)
+        if isinstance(game, str):
+            game = self.game_str_to_task[game]
         actions = [np.argmax(act_probs[i, :],
                              axis=-1) for i in range(len(act_probs))]
         bets = [self.bets[a] for a in actions]
@@ -248,7 +252,7 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
         if base_or_meta == "base":
             outcomes = feed_dict[self.base_target_ph]
-            if call_type == "standard": 
+            if call_type == "standard" or not self.architecture_config["persistent_task_reps"]: 
                 feed_dict[self.base_outcome_ph] = outcomes 
             targets, target_mask = self._outcomes_to_targets(outcomes)
             feed_dict[self.base_target_ph] = targets 
@@ -261,7 +265,7 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         fetches = [self.total_base_loss, self.base_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
-        rewards = self.reward_eval_helper(game, res[1], inputs)
+        rewards = self.reward_eval_helper(task, res[1], inputs)
         name = str(task)
         return [name + "_loss", name + "_rewards"], [res[0], rewards] 
 
@@ -270,9 +274,8 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         fetches = [self.base_fed_emb_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
-        rewards = self.reward_eval_helper(game, res[0], inputs)
-        return res
-
+        rewards = self.reward_eval_helper(task, res[0], inputs)
+        return [rewards]
 
 
 ## stuff
