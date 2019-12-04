@@ -137,6 +137,7 @@ ggplot(meta_true_d %>%
   facet_grid(run ~ run_type)
 ```
 
+This seems to be a good criteria for persistent reps, but interestingly not for non-persistent.
 ```{r}
 selected_meta_true_d = meta_true_d %>%
   filter(meta_task=="toggle_losers",
