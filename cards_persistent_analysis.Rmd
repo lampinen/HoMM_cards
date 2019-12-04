@@ -1,0 +1,154 @@
+---
+title: "Cards persistent analysis"
+author: "Andrew Lampinen"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+# data loading
+
+```{r}
+parent_dir = "."
+subdirs = c("results_for_humans_with_library_2", "results_for_humans_with_library_3",
+            #"results_for_humans_with_library_persistent",  "results_for_humans_with_library_persistent_2", "results_for_humans_with_library_persistent_3",  "results_for_humans_with_library_persistent_4", 
+            "results_for_humans_with_library_persistent_5",  "results_for_humans_with_library_persistent_6",
+            "results_for_humans_with_library_persistent_7", 
+            "results_for_humans_with_library_persistent_8", 
+            "results_for_humans_with_library_persistent_9"
+            )
+num_runs = 3
+```
+
+```{r}
+read_config = function(config_file) { 
+  config = read_delim(config_file, delim="\n") %>%
+    separate(`key, value`, c("key", "value"), sep=",", extra="merge") %>%
+    spread(key, value) %>%
+    mutate_at(c("base_train_tasks", "base_eval_tasks", "meta_class_train_tasks", "meta_class_eval_tasks", "meta_map_train_tasks", "meta_map_eval_tasks"), function(x) {
+      x = gsub("\\\"|[][]| |\'", "", x)
+      return(str_split(x, ","))
+    } )
+}
+```
+
+```{r}
+load_d = function(results_dir, result_subdirs, num_runs, file_type) {
+  d = data.frame()
+  for (run_i in 0:(num_runs-1)) {
+    for (result_subdir in result_subdirs) {
+      filename = sprintf("%s/%s/run%i_%s.csv", results_dir, result_subdir, run_i, file_type)
+      print(filename)
+      if (!file.exists(filename)) {
+        print(paste("skipping ", filename, sep=""))
+        next
+      }
+      if (grepl("config", file_type)) {
+        this_d = read_config(filename)
+      } else {
+        this_d = read.csv(filename, check.names=F, header=T) 
+        names(this_d) <- make.unique(names(this_d))
+
+      }
+      this_d = this_d %>%
+        mutate(run = run_i,
+               run_type = result_subdir)
+      d = d %>%
+        bind_rows(this_d)
+    }
+    
+  }
+  return(d)
+}
+```
+
+```{r}
+config_d = load_d(parent_dir, subdirs, num_runs, "run_config")
+loss_d = load_d(parent_dir, subdirs, num_runs, "losses")
+meta_true_d = load_d(parent_dir, subdirs, num_runs, "meta_true_losses")
+```
+
+# some manipulation
+
+```{r}
+loss_d = loss_d %>%
+  filter(epoch %% 100 == 0) %>%
+  gather(task, loss, -epoch, -run, -run_type) %>%
+  mutate(meta = grepl("is|toggle", task)) %>%
+  filter(!meta, grepl("rewards", task)) %>%
+  mutate(task = sub("_rewards", "", task),
+         train_or_eval = ifelse(grepl("straight_flush_l_1", task), "eval", "train"))
+  
+```
+
+
+```{r}
+meta_true_d = meta_true_d %>%
+  filter(epoch %% 100 == 0) %>%
+  gather(task, loss, -epoch, -run, -run_type) %>%
+  separate(task, c("meta_task", "mapping_toe", "base_task_toe", "source", "target"), ":|->")
+  
+```
+
+# basic plots
+```{r}
+theme_set(theme_bw())
+```
+
+```{r}
+ggplot(loss_d,
+       aes(x=epoch, y=loss, color=train_or_eval)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run_type ~ meta)
+```
+
+```{r}
+ggplot(meta_true_d %>% 
+         filter(meta_task == "toggle_losers"),
+       aes(x=epoch, y=loss, color=base_task_toe)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run ~ run_type)
+```
+
+
+```{r}
+ggplot(meta_true_d %>% 
+         filter(meta_task == "toggle_losers",
+                source == "game_straight_flush_l_0_bv_0_sr_0"),
+       aes(x=epoch, y=loss, color=base_task_toe)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run ~ run_type)
+```
+
+```{r}
+ggplot(meta_true_d %>%
+         filter(meta_task=="toggle_losers") %>%
+         group_by(run_type, run, epoch, base_task_toe) %>%
+         summarize(mean_loss=mean(loss)) %>%
+         ungroup() %>%
+         spread(base_task_toe, mean_loss),
+       aes(x=example_is_train, y=example_is_eval, alpha=epoch)) +
+  geom_point() +
+  facet_grid(run ~ run_type)
+```
+
+```{r}
+selected_meta_true_d = meta_true_d %>%
+  filter(meta_task=="toggle_losers",
+         base_task_toe == "example_is_train" | source == "game_straight_flush_l_0_bv_0_sr_0") %>%
+  group_by(run_type, run, epoch, base_task_toe) %>%
+  summarize(mean_loss=mean(loss)) %>%
+  ungroup() %>%
+  spread(base_task_toe, mean_loss) %>%
+  group_by(run_type, run) %>%
+  filter(example_is_train == max(example_is_train))
+selected_meta_true_d %>%
+  arrange(desc(example_is_train))
+
+```
+
