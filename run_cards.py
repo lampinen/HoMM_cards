@@ -11,7 +11,7 @@ import simple_card_games
 
 run_config = default_run_config.default_run_config
 run_config.update({
-    "output_dir": "results_for_humans_with_library/",
+    "output_dir": "results_for_humans_with_library_4/",
 
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
@@ -19,7 +19,7 @@ run_config.update({
     "losers": [True, False],
     "black_valuable": [True, False],
 
-    "softmax_beta": 5,
+    "softmax_beta": 8,
 
     "bets": [0, 1, 2],
     "new_tasks": [{"game_type": "straight_flush", "losers": True,
@@ -32,20 +32,20 @@ run_config.update({
                   "black_valuable": True, "suits_rule": True}], # will be removed
                                                                 # from base tasks
 
-    "init_learning_rate": 1e-4,
-    "init_meta_learning_rate": 5e-5,
+    "init_learning_rate": 2e-4,
+    "init_meta_learning_rate": 1e-4,
 
     "lr_decay": 0.85,
     "language_lr_decay": 0.8,
     "meta_lr_decay": 0.9,
 
-    "lr_decays_every": 100,
+    "lr_decays_every": 200,
     "min_learning_rate": 3e-8,
     "min_language_learning_rate": 1e-8,
     "min_meta_learning_rate": 3e-7,
 
-    "num_epochs": 40000,
-    "eval_every": 200,
+    "num_epochs": 500000,
+    "eval_every": 100,
 })
 
 architecture_config = default_architecture_config.default_architecture_config
@@ -56,19 +56,19 @@ architecture_config.update({
    "outcome_shape": [3 + 1],  # one-hot bet + reward
    "output_masking": True,
 
-    "IO_num_hidden": 64,
+    "IO_num_hidden": 128,
     "optimizer": "RMSProp",
 
     "meta_batch_size": 768,
 })
-if False:  # enable for persistent reps
+if True:  # enable for persistent reps
     architecture_config.update({
         "persistent_task_reps": True,
         "combined_emb_guess_weight": "varied",
-        "emb_match_loss_weight": 0.5,
+        "emb_match_loss_weight": 1.,
     })
     run_config.update({
-        "output_dir": "results_for_humans_with_library_persistent/",
+        "output_dir": "results_for_humans_with_library_persistent_10/",
     })
 
 class cards_HoMM_model(HoMM_model.HoMM_model):
