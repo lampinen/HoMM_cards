@@ -1,0 +1,88 @@
+\documentclass[final]{beamer}
+\usepackage[size=a0]{beamerposter}
+\mode<presentation>{\usetheme{lampinen}}
+\usepackage{float}
+\usepackage{url}           
+%\usepackage{booktabs}      
+\usepackage{amsfonts}      
+%\usepackage{blkarray}
+\usepackage{amssymb}
+\usepackage{amsmath}
+%\usepackage{nicefrac}      
+%\usepackage{microtype}   
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usepackage[numbers]{natbib}
+\usetikzlibrary{matrix,backgrounds}
+\usetikzlibrary{positioning}
+\usetikzlibrary{shapes,arrows}
+\usetikzlibrary{decorations.pathreplacing,angles,quotes}
+
+
+\tikzstyle{netnode} = [circle, draw, thick, inner sep=0pt, minimum size=0.5cm]
+\tikzstyle{relunode} = [rectangle, draw, thick, inner sep=0pt, minimum size=0.5cm]
+
+\tikzstyle{line} = [draw, line width=0.5pt, -latex']
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\bb}[1]{{\bf\overline{#1}}}
+\newcommand{\bh}[1]{{\bf\hat{#1}}}
+\newcommand{\sg}[1]{{\color{red} #1}}
+\newcommand{\eopt}[1]{\varepsilon^\text{opt}_{#1}}
+
+
+\newcommand{\trainerr}{\mathcal{\varepsilon}_\text{train}}
+\newcommand{\generr}{\mathcal{\varepsilon}_\text{test}}
+
+\newcommand{\toptn}{{t}^\text{opt}_\text{neural}}
+\newcommand{\eoptn}{\mathcal{\varepsilon}^\text{opt}_\text{neural}}
+\newcommand{\eoptnn}{\mathcal{\varepsilon}^\text{opt}_\text{non-neural}}
+
+\newcommand{\wa}{{\bf{W}^{21}}}
+\newcommand{\wb}{{\bf{W}^{32}}}
+\newcommand{\ddt}{\frac{d}{dt}}
+\newcommand{\ovn}{\overline{N}}
+
+\setlength{\parskip}{0.5em}
+
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\title{Zero-Shot Task Adaptation by Homoiconic Meta-mapping (HoMM)}
+\author{Andrew K. Lampinen \& James L. McClelland}
+\institute{Department of Psychology, Stanford University}
+
+\begin{document}
+
+\begin{frame}[t]{}
+\vspace{-1.5em}
+\begin{columns}
+
+\begin{column}[t]{0.248\textwidth}
+\begin{block}{\huge Zero-shot adaptation}
+\end{block}
+\begin{block}{\huge Meta-mapping}
+\end{block}
+\end{column}
+\begin{column}[t]{0.496\textwidth}
+\begin{block}{\huge Homoiconic Meta-Mapping (HoMM) architectures}
+\end{block}
+\end{column}
+\begin{column}[t]{0.248\textwidth}
+\begin{block}{\huge Conclusions}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+\end{document}
