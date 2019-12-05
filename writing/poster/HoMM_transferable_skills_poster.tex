@@ -52,13 +52,29 @@
 \begin{document}
 
 \begin{frame}[t]{}
-\vspace{-1.5em}
+\vspace{-1em}
 \begin{columns}
 
 \begin{column}[t]{0.248\textwidth}
-\begin{block}{\huge Zero-shot adaptation}
+\begin{block}{\huge Intro: zero-shot adaptation}
+\Large
+\begin{itemize}
+\item Humans can adapt zero-shot to novel tasks, based on their relationship to prior tasks.
+\item For example, if asked to alter our behavior on a game we have learned (like trying to lose or achieve some other goal), we can perform well on our first try.
+\item We take inspiration from this to propose \emph{meta-mapping}, a novel function-transformation perspective on zero-shot task performance.
+\item We propose Homoiconic Meta-Mapping (HoMM) architectures as a parsimonious implementation of this framework.
+\item We demonstrate successful zero-shot adaptation to related but substantially different tasks, such as adapting to trying to lose a card game the system has been trained to win.
+\end{itemize}
 \end{block}
 \begin{block}{\huge Meta-mapping}
+\Large
+\begin{itemize}
+\item Consider a functional perspective. Basic tasks can be seen as functions mapping images to classes, or states to actions, or card hands to bets.
+\item We suggest it's then useful to think of transformations over functions, that is, functions which take other functions as input and/or output.
+\item We call these higher-level functions \emph{meta-mappings}. They are functions which take basic functions as input and produce other basic functions as output.
+\item For example, we could have a try-to-lose function which takes as input a function that tries to win money by betting, and outputs a function which tries to lose money by betting.
+\item We suggest that these transformations of functions are a useful way to think about human flexibility.
+\end{itemize}
 \end{block}
 \end{column}
 \begin{column}[t]{0.496\textwidth}
