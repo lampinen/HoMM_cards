@@ -21,8 +21,9 @@
 
 \setbeamercolor*{normal text}{fg=black, bg=cloud}
 \setbeamercolor*{block body}{bg=lightsage,fg=black}
+\setbeamerfont{block body}{size=\Large}
 \setbeamercolor*{block title}{fg=white,bg=paloalto}
-\setbeamerfont{block title}{size=\large,series=\bf}
+\setbeamerfont{block title}{size=\huge,series=\bf}
 \setbeamercolor{upper separation line head}{fg=black}
 
 \setbeamercolor*{example body}{fg=black,bg=lightsage}
@@ -42,6 +43,7 @@
 \setbeamertemplate{block begin}{
   \vskip 0.5em
   \begin{beamercolorbox}[rounded=true,shadow=true,leftskip=1cm,colsep*=.75ex]{block title}%
+    \vskip -0.4em
     \usebeamerfont*{block title}\insertblocktitle
   \end{beamercolorbox}%
   {\ifbeamercolorempty[bg]{block body}{}{\nointerlineskip\vskip-0.5pt}}%
@@ -49,6 +51,7 @@
   \begin{beamercolorbox}[rounded=true,shadow=true,colsep*=.75ex,sep=.75ex,vmode]{block body}%
     \ifbeamercolorempty[bg]{block body}{\vskip-.25ex}{\vskip-.75ex}\vbox{}%
   }
+  \vspace{-0.5em}
   \setbeamertemplate{block end}{
   \end{beamercolorbox}
 }

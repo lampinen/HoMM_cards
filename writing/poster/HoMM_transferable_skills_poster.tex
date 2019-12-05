@@ -57,7 +57,6 @@
 
 \begin{column}[t]{0.248\textwidth}
 \begin{block}{\huge Intro: zero-shot adaptation}
-\Large
 \begin{itemize}
 \item Humans can adapt zero-shot to novel tasks, based on their relationship to prior tasks.
 \item For example, if asked to alter our behavior on a game we have learned (like trying to lose or achieve some other goal), we can perform well on our first try.
@@ -67,13 +66,12 @@
 \end{itemize}
 \end{block}
 \begin{block}{\huge Meta-mapping}
-\Large
 \begin{itemize}
-\item Consider a functional perspective. Basic tasks can be seen as functions mapping images to classes, or states to actions, or card hands to bets.
+\item Consider a functional perspective. Basic tasks can be seen as functions mapping images to classes, or states to actions, or card hands to bets, etc.
 \item We suggest it's then useful to think of transformations over functions, that is, functions which take other functions as input and/or output.
 \item We call these higher-level functions \emph{meta-mappings}. They are functions which take basic functions as input and produce other basic functions as output.
 \item For example, we could have a try-to-lose function which takes as input a function that tries to win money by betting, and outputs a function which tries to lose money by betting.
-\item We suggest that these transformations of functions are a useful way to think about human flexibility.
+\item We suggest that meta-mappings are a useful way to think about human-like zero-shot adaptation.
 \end{itemize}
 \end{block}
 \end{column}
@@ -81,6 +79,7 @@
 \begin{block}{\huge Homoiconic Meta-Mapping (HoMM) architectures}
 \begin{figure}[H]
 \centering
+\normalsize
 \begin{tikzpicture}[scale=3, every node/.style={scale=1.2}]
 %% basic meta learning
 \begin{scope}[shift={(0.4, 0.4)}]
@@ -273,6 +272,20 @@ $\vdots$
 \end{block}
 \end{column}
 \begin{column}[t]{0.248\textwidth}
+\begin{block}{\huge Why \& prior work}
+\begin{itemize}
+\item Prior work has considered zero-shot task performance from language descriptions, with approaches that implicitly use prior task knowlege for the novel task.
+\item However, transforming a task representation provides a richer and more explicit way to use prior knowledge.
+\item Probably because of this, meta-mapping offers better zero-shot performance than a baseline of performing the task from natural language alone.
+\item Meta-mapping thus offers a happy intermediate between meta-learning (which requires data on the new task), and zero-shot performance from language alone.
+\end{itemize}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{../figures/why_meta_mapping.png}
+\label{fig_why_meta_mapping}
+\end{figure}
+
+\end{block}
 \begin{block}{\huge Conclusions}
 \end{block}
 \end{column}
