@@ -13,38 +13,24 @@
 \usepackage{graphics}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage{tikz}
 \usepackage{subcaption}
 \usepackage[numbers]{natbib}
-\usetikzlibrary{matrix,backgrounds}
-\usetikzlibrary{positioning}
+\usepackage{tikz}
+
 \usetikzlibrary{shapes,arrows}
-\usetikzlibrary{decorations.pathreplacing,angles,quotes}
 
+\tikzstyle{block} = [rectangle, draw, line width=2mm, align=center, rounded corners]
+\tikzstyle{boundingbox} = [line width=2mm, lightgray]
+\tikzstyle{dashblock} = [rectangle, draw, line width=2mm, align=center, dashed]
+\tikzstyle{conc} = [ellipse, draw, thick, dashed, align=center]
+\tikzstyle{netnode} = [circle, draw, line width=2mm, very thick, inner sep=0pt, minimum size=0.5cm]
+\tikzstyle{relunode} = [rectangle, draw, very thick, inner sep=0pt, minimum size=0.5cm]
+\tikzstyle{line} = [draw, line width=2mm, -latex']
+\tikzstyle{arrow} = [draw, ->, line width=2mm]
 
-\tikzstyle{netnode} = [circle, draw, thick, inner sep=0pt, minimum size=0.5cm]
-\tikzstyle{relunode} = [rectangle, draw, thick, inner sep=0pt, minimum size=0.5cm]
+\definecolor{bpurp}{HTML}{984ea3}
+\definecolor{bblue}{HTML}{377eb8}
 
-\tikzstyle{line} = [draw, line width=0.5pt, -latex']
-
-\newcommand{\R}{\mathbb{R}}
-\newcommand{\bb}[1]{{\bf\overline{#1}}}
-\newcommand{\bh}[1]{{\bf\hat{#1}}}
-\newcommand{\sg}[1]{{\color{red} #1}}
-\newcommand{\eopt}[1]{\varepsilon^\text{opt}_{#1}}
-
-
-\newcommand{\trainerr}{\mathcal{\varepsilon}_\text{train}}
-\newcommand{\generr}{\mathcal{\varepsilon}_\text{test}}
-
-\newcommand{\toptn}{{t}^\text{opt}_\text{neural}}
-\newcommand{\eoptn}{\mathcal{\varepsilon}^\text{opt}_\text{neural}}
-\newcommand{\eoptnn}{\mathcal{\varepsilon}^\text{opt}_\text{non-neural}}
-
-\newcommand{\wa}{{\bf{W}^{21}}}
-\newcommand{\wb}{{\bf{W}^{32}}}
-\newcommand{\ddt}{\frac{d}{dt}}
-\newcommand{\ovn}{\overline{N}}
 
 \setlength{\parskip}{0.5em}
 
@@ -77,6 +63,197 @@
 \end{column}
 \begin{column}[t]{0.496\textwidth}
 \begin{block}{\huge Homoiconic Meta-Mapping (HoMM) architectures}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=3, every node/.style={scale=1.2}]
+%% basic meta learning
+\begin{scope}[shift={(0.4, 0.4)}]
+\draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
+\end{scope}
+\begin{scope}[shift={(0.2, 0.2)}]
+\draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
+\end{scope}
+
+\draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
+\node[lightgray] at (-1.2, 2.9) {(a) Basic meta-learning};
+\node at (-1.5, -4) (examples) {Examples};
+\node at (-1.5, -3.2) (D1) {
+\(\left\{
+\begin{matrix}
+(z^{ex}_{in,0}, z^{ex}_{targ,0})\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node at (1.5, -4) (probes) {Probes};
+\node at (1.5, -3.2) (D2) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{prb}_{in,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node [block] at (-1.5, -1.95) (M) {\(\mathcal{M}\)};
+\path [arrow] ([yshift=-5]D1.north) to (M);
+
+\node at (-1, -1) (zfunc) {\(z^{func}\)};
+\path [arrow, out=90, in=-135] (M.north) to ([xshift=5,yshift=2]zfunc.south west);
+
+\node[block] at (0, -0.55) (H) {\(\mathcal{H}\)};
+\path [arrow, out=45, in=180] ([yshift=-3]zfunc.north) to (H.west);
+
+\node [block, dashed] at (1.5, -0.55) (F) {\(F_{z^{func}}\)};
+\path[arrow] (H.east) to (F.west);
+
+\path [arrow, dashed] (D2) to (F);
+
+\node at (1.5, 1) (outputs) {
+%\(z^{pred}_{out}\)};
+\(\left\{
+\begin{matrix}
+z^{pred}_{out,0},\\
+$\vdots$
+\end{matrix}\right\}\)};
+\node at (1.5, 1.75) (predictions) {Predictions};
+
+\path [arrow, dashed] (F) to ([yshift=3]outputs.south);
+
+\node at (-1.5, 1.75) (probetargs) {Probe targets};
+\node at (-1.5, 1) (D2targs) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{prb}_{targ,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node [align=center, text width=1.25 cm] at (0, 2.25) (dispatch) {\baselineskip=12pt Loss\par};
+
+\path [arrow, dashed, out=180, in=-90] ([xshift=3]outputs.west) to (dispatch.south);
+
+\path [arrow, dashed, out=0, in=-90] ([xshift=-3.5]D2targs.east) to (dispatch.south);
+
+
+
+%% meta mapping
+\begin{scope}[shift={(6.4, 1.5)}]
+\draw[boundingbox, draw=bpurp, fill=white] (-3, -4.3) rectangle (2.6, 3.2);
+\node[bpurp] at (-1.6, 2.9) {(b) Meta-mapping};
+\node at (-1.5, -4) (metaexamples) {Examples};
+\node at (-1.5, -3.2) (metaD1) {
+\(\left\{
+\begin{matrix}
+(z^{func}_{in,0}, z^{func}_{targ,0})\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node at (1.5, -4) (metaprobes) {Probes};
+\node at (1.5, -3.2) (metaD2) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{func,prb}_{in,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node [block] at (-1.5, -1.95) (metaM) {\(\mathcal{M}\)};
+\path [arrow] ([yshift=-5]metaD1.north) to (metaM);
+
+\node at (-1, -1) (metazfunc) {\(z^{meta}\)};
+\path [arrow, out=90, in=-135] (metaM.north) to ([xshift=5,yshift=2]metazfunc.south west);
+
+\node[block] at (0, -0.55) (metaH) {\(\mathcal{H}\)};
+\path [arrow, out=45, in=180] ([yshift=-3]metazfunc.north) to (metaH.west);
+
+\node [block, dashed] at (1.5, -0.55) (metaF) {\(F_{z^{meta}}\)};
+\path[arrow] (metaH.east) to (metaF.west);
+
+\path [arrow, dashed] (metaD2) to (metaF);
+
+\node at (1.5, 1) (metaoutputs) {
+%\(z^{pred}_{out}\)};
+\(\left\{
+\begin{matrix}
+z^{func,pred}_{out,0},\\
+$\vdots$
+\end{matrix}\right\}\)};
+\node at (1.5, 1.75) (metapredictions) {Predictions};
+
+\path [arrow, dashed] (metaF) to ([yshift=3]metaoutputs.south);
+
+\node at (-1.5, 1.75) (metaprobetargs) {Probe targets};
+\node at (-1.5, 1) (metaD2targs) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{func,prb}_{targ,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node [align=center] at (0, 2.25) (metadispatch) {Loss (train)};
+
+\path [arrow, dashed, out=180, in=-90] ([xshift=3]metaoutputs.west) to (metadispatch.south);
+
+\path [arrow, dashed, out=0, in=-90] ([xshift=1]metaD2targs.east) to (metadispatch.south);
+
+
+\end{scope}
+\path [arrow, line width=2mm, draw=bpurp, dotted, out=-40, in=-140] ([xshift=-1, yshift=3]zfunc.south) to ([xshift=17, yshift=2]metaD1.west);
+
+%% evaluating meta mapping
+\begin{scope}[shift={(12.1, 0)}]
+\draw[boundingbox, draw=bblue, fill=white] (-2.65, -4.3) rectangle (2.85, 3.2);
+\node[bblue] at (-0.85, 2.85) {(c) Zero-shot evaluation};
+
+\node at (1.5, -4) (metaevalprobes) {Probes};
+\node at (1.5, -3.2) (metaevalD2) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{prb}_{in,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node at (-1, -1) (metaevalzfunc) {\(z^{func,pred}\)};
+
+\node[block] at (0, -0.55) (metaevalH) {\(\mathcal{H}\)};
+\path [arrow, out=45, in=180] ([yshift=-3]metaevalzfunc.north) to (metaevalH.west);
+
+\node [block, dashed] at (1.5, -0.55) (metaevalF) {\(F_{z^{func,pred}}\)};
+\path[arrow] (metaevalH.east) to (metaevalF.west);
+
+\path [arrow, dashed] (metaevalD2) to (metaevalF);
+
+\node at (1.5, 1) (metaevaloutputs) {
+%\(z^{pred}_{out}\)};
+\(\left\{
+\begin{matrix}
+z^{pred}_{out,0},\\
+$\vdots$
+\end{matrix}\right\}\)};
+\node at (1.5, 1.75) (metaevalpredictions) {Predictions};
+
+\path [arrow, dashed] (metaevalF) to ([yshift=3]metaevaloutputs.south);
+
+\node at (-1, 1.75) (metaevalprobetargs) {Probe targets};
+\node at (-1, 1) (metaevalD2targs) {
+%\(z^{prb}_{in}\)};
+\(\left\{
+\begin{matrix}
+z^{prb}_{targ,0}\\
+$\vdots$
+\end{matrix}\right\}\)};
+
+\node [align=center] at (0.3, 2.25) (metaevaldispatch) {Loss (eval)};
+
+\path [arrow, dashed, out=180, in=-90] ([xshift=3]metaevaloutputs.west) to (metaevaldispatch.south);
+
+\path [arrow, dashed, out=0, in=-90] ([xshift=-0.5]metaevalD2targs.east) to (metaevaldispatch.south);
+\end{scope}
+\path [arrow, line width=2mm, draw=bblue, dotted, out=-30, in=160] ([xshift=3,yshift=-3]metaoutputs.center) to ([xshift=2, yshift=-10]metaevalzfunc.north west);
+\end{tikzpicture}
+%\caption{The HoMM architecture allows for transformations at different levels of abstraction. (a) For basic meta-learning a dataset consisting of (input embedding, output embedding) tuples is processed by the meta-network \(\mathcal{M}\) to produce a function embedding \(z^{func}\), which is processed by the hyper network \(\mathcal{H}\) to parameterize a function \(F_{z^{func}}\), which attempts to compute the transformation on probe inputs (used to encourage the system to generalize). However, our approach goes beyond basic meta-learning. The function embedding \(z^{func}\) can then be seen as a single input or output at the next level of abstraction, when the same networks \(\mathcal{M}\) and \(\mathcal{H}\) are used to transform function embeddings based on examples of a meta-mapping (b). To evaluate meta-mapping performance, a probe embedding of a held-out function is transformed by the architecture to yield a predicted embedding for the transformed task. The performance of this predicted embedding is evaluated by moving back down a level of abstraction and evaluating on the actual target task (c). Because the function embedding is predicted by a transformation rather than from examples, new tasks can be performed zero-shot. (\(M\) and \(H\) are learnable deep networks, and $F_{z}$ is a deep network parameterized by $\mathcal{H}$ conditioned on function embedding \(z\). Input and output encoders/decoders are omitted for simplicity. See the text and Appendix \ref{app_model_details} for details.)} \label{architecture_inference_fig}
+\end{figure}
 \end{block}
 \end{column}
 \begin{column}[t]{0.248\textwidth}
