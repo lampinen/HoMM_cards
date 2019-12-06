@@ -158,7 +158,7 @@ selected_meta_true_d %>%
 
 This doesn't work particularly well either for non-persistent, either selecting on eval_other or on train_and_other, but might work better with persistent
 ```{r}
-selected_meta_true_d_3 = meta_true_d %>%
+selected_meta_true_d_2 = meta_true_d %>%
   filter(meta_task=="toggle_losers") %>%
   mutate(source_type=case_when(
     base_task_toe == "example_is_train" ~ "train",
@@ -171,6 +171,31 @@ selected_meta_true_d_3 = meta_true_d %>%
   mutate(train_and_other = train + eval_other) %>%
   group_by(run_type, run) %>%
   filter(train_and_other == max(train_and_other))
-selected_meta_true_d_3 %>%
+selected_meta_true_d_2 %>%
   arrange(desc(train_and_other))
+```
+
+Also somewhat promising:
+```{r}
+source_task_loss_d = loss_d %>%
+  filter(task == "game_straight_flush_l_0_bv_0_sr_0:train") %>%
+  select(epoch, run, run_type, loss) %>%
+  rename(source_task_base_loss = loss)
+
+selected_meta_true_d_3 = meta_true_d %>%
+  filter(meta_task=="toggle_losers") %>%
+  mutate(source_type=case_when(
+    base_task_toe == "example_is_train" ~ "train",
+    source == "game_straight_flush_l_0_bv_0_sr_0" ~ "eval_target",
+    T ~ "eval_other")) %>%
+  group_by(run_type, run, epoch, source_type) %>%
+  summarize(mean_loss=mean(loss)) %>%
+  ungroup() %>%
+  spread(source_type, mean_loss) %>%
+  left_join(source_task_loss_d) %>%
+  mutate(source_loss_and_other = source_task_base_loss + eval_other) %>%
+  group_by(run_type, run) %>%
+  filter(source_loss_and_other == max(source_loss_and_other))
+selected_meta_true_d_3 %>%
+  arrange(desc(source_loss_and_other))
 ```
