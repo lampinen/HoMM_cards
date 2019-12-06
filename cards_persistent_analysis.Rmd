@@ -156,12 +156,10 @@ selected_meta_true_d %>%
 ```
 
 
-This doesn't work particularly well either for non-persistent, either selecting on eval_other or on train_and_other.
-
+This doesn't work particularly well either for non-persistent, either selecting on eval_other or on train_and_other, but might work better with persistent
 ```{r}
 selected_meta_true_d_3 = meta_true_d %>%
-  filter(meta_task=="toggle_losers",
-         !grepl("persistent", run_type)) %>%
+  filter(meta_task=="toggle_losers") %>%
   mutate(source_type=case_when(
     base_task_toe == "example_is_train" ~ "train",
     source == "game_straight_flush_l_0_bv_0_sr_0" ~ "eval_target",
