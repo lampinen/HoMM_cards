@@ -57,6 +57,7 @@
 
 \begin{column}[t]{0.248\textwidth}
 \begin{block}{\huge Intro: zero-shot adaptation}
+\vspace{-0.6em}
 \begin{itemize}
 \item Humans can adapt zero-shot to novel tasks, based on their relationship to prior tasks.
 \item For example, if asked to alter our behavior on a game we have learned (like trying to lose or achieve some other goal), we can perform well on our first try.
@@ -66,21 +67,43 @@
 \end{itemize}
 \end{block}
 \begin{block}{\huge Meta-mapping}
+\vspace{-0.6em}
 \begin{itemize}
 \item Consider a functional perspective. Basic tasks can be seen as functions mapping images to classes, or states to actions, or card hands to bets, etc.
 \item We suggest it's then useful to think of transformations over functions, that is, functions which take other functions as input and/or output.
 \item We call these higher-level functions \emph{meta-mappings}. They are functions which take basic functions as input and produce other basic functions as output.
-\item For example, we could have a try-to-lose function which takes as input a function that tries to win money by betting, and outputs a function which tries to lose money by betting.
+\item For example, we could have a try-to-lose function which takes as input a function that tries to win money at poker, and outputs a function which tries to lose money at poker.
 \item We suggest that meta-mappings are a useful way to think about human-like zero-shot adaptation.
 \end{itemize}
 \end{block}
+\begin{block}{\huge Functional analogy}
+\vspace{-0.6em}
+\begin{itemize}
+\item Meta-mappings can be learned in the same way that other functions are learned -- using a deep network to approximate the function.
+\item We learn a meta-mapping from a dataset of example (input function, output function) tuples, analogously to learning a basic task from example tuples of (image, class), or (hand, bet, reward). 
+\end{itemize}
+\end{block}
 \end{column}
+
 \begin{column}[t]{0.496\textwidth}
 \begin{block}{\huge Homoiconic Meta-Mapping (HoMM) architectures}
+\begin{columns}
+\begin{column}[t]{0.48\textwidth}
+\textbf{Basic tasks:}
+\begin{itemize}
+\item We embed inputs and outputs into a shared latent space $Z$. 
+\item We meta-learn to  
+\end{itemize}
+\end{column}
+\begin{column}[t]{0.48\textwidth}
+\textbf{Meta-mappings:}
+\end{column}
+\end{columns}
+
 \begin{figure}[H]
 \centering
 \normalsize
-\begin{tikzpicture}[scale=3, every node/.style={scale=1.2}]
+\begin{tikzpicture}[scale=2.5, every node/.style={scale=1}]
 %% basic meta learning
 \begin{scope}[shift={(0.4, 0.4)}]
 \draw[boundingbox, fill=white] (-3, -4.3) rectangle (2.5, 3.2);
