@@ -5,6 +5,7 @@
 \usepackage{url}           
 %\usepackage{booktabs}      
 \usepackage{amsfonts}      
+\usepackage{bm}
 %\usepackage{blkarray}
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -87,16 +88,20 @@
 
 \begin{column}[t]{0.496\textwidth}
 \begin{block}{\huge Homoiconic Meta-Mapping (HoMM) architectures}
+\vspace{-0.5em}
 \begin{columns}
 \begin{column}[t]{0.48\textwidth}
-\textbf{Basic tasks:}
+\textbf{Basic tasks (meta-learning):}
 \begin{itemize}
-\item We embed inputs and outputs into a shared latent space $Z$. 
-\item We meta-learn to  
+\item We embed inputs and outputs into a shared latent space \(\bm Z\). 
+\item We meta-learn a network \(\mathcal{M}\) to map a dataset of embedded example tuples \(\{(z^{ex}_{in}, z^{ex}_{out}), ...\}\) to an embedding for that task/function \(z^{func}\). 
+\item The function embedding \(z^{func}\) parameterizes a task-network \(F\), via a hyper network \(\mathcal{H}\).
+\item The task network \(F\) transforms embedded inputs to embedded outputs, which are decoded to output.
+\item The system is trained end-to-end.
 \end{itemize}
 \end{column}
 \begin{column}[t]{0.48\textwidth}
-\textbf{Meta-mappings:}
+\textbf{Meta-mappings (zero-shot task performance):}
 \end{column}
 \end{columns}
 
