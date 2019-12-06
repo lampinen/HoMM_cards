@@ -81,7 +81,7 @@
 \vspace{-0.6em}
 \begin{itemize}
 \item Meta-mappings can be learned in the same way that other functions are learned -- using a deep network to approximate the function.
-\item We learn a meta-mapping from a dataset of example (input function, output function) tuples, analogously to learning a basic task from example tuples of (image, class), or (hand, bet, reward). 
+\item We learn a meta-mapping from a dataset of example (input function, output function) tuples, analogously to learning a basic task from example tuples of (image, label), or (hand, bet, reward). 
 \end{itemize}
 \end{block}
 \end{column}
@@ -93,15 +93,22 @@
 \begin{column}[t]{0.48\textwidth}
 \textbf{Basic tasks (meta-learning):}
 \begin{itemize}
-\item We embed inputs and outputs into a shared latent space \(\bm Z\). 
+\item We embed inputs and outputs into a shared latent space \(Z\). 
 \item We meta-learn a network \(\mathcal{M}\) to map a dataset of embedded example tuples \(\{(z^{ex}_{in}, z^{ex}_{out}), ...\}\) to an embedding for that task/function \(z^{func}\). 
 \item The function embedding \(z^{func}\) parameterizes a task-network \(F\), via a hyper network \(\mathcal{H}\).
-\item The task network \(F\) transforms embedded inputs to embedded outputs, which are decoded to output.
+\item The task network \(F\) transforms embedded inputs to results which are decoded to output.
 \item The system is trained end-to-end.
 \end{itemize}
 \end{column}
 \begin{column}[t]{0.48\textwidth}
 \textbf{Meta-mappings (zero-shot task performance):}
+\begin{itemize}
+\item We exploit the analogy above to use \emph{the same meta-learning system} for meta-mappings.
+\item We pass a dataset of example function mappings \(\{(z^{func}_{in}, z^{func}_{out}\}\) through \(\mathcal{M}\) to produce a meta-mapping embedding \(z^{meta}\). 
+\item We parameterize \(F\) as before, and can pass a new function embedding through \(F\) to guess an embedding for a transformed task \(z^{func,pred}\).
+\item We can use \(z^{func,pred}\) to perform a transformed task zero-shot (or train to match a target).
+\item Parsimonious, same networks as basic meta-learning.
+\end{itemize}
 \end{column}
 \end{columns}
 
@@ -298,7 +305,37 @@ $\vdots$
 %\caption{The HoMM architecture allows for transformations at different levels of abstraction. (a) For basic meta-learning a dataset consisting of (input embedding, output embedding) tuples is processed by the meta-network \(\mathcal{M}\) to produce a function embedding \(z^{func}\), which is processed by the hyper network \(\mathcal{H}\) to parameterize a function \(F_{z^{func}}\), which attempts to compute the transformation on probe inputs (used to encourage the system to generalize). However, our approach goes beyond basic meta-learning. The function embedding \(z^{func}\) can then be seen as a single input or output at the next level of abstraction, when the same networks \(\mathcal{M}\) and \(\mathcal{H}\) are used to transform function embeddings based on examples of a meta-mapping (b). To evaluate meta-mapping performance, a probe embedding of a held-out function is transformed by the architecture to yield a predicted embedding for the transformed task. The performance of this predicted embedding is evaluated by moving back down a level of abstraction and evaluating on the actual target task (c). Because the function embedding is predicted by a transformation rather than from examples, new tasks can be performed zero-shot. (\(M\) and \(H\) are learnable deep networks, and $F_{z}$ is a deep network parameterized by $\mathcal{H}$ conditioned on function embedding \(z\). Input and output encoders/decoders are omitted for simplicity. See the text and Appendix \ref{app_model_details} for details.)} \label{architecture_inference_fig}
 \end{figure}
 \end{block}
+
+\begin{block}{\huge Experiments}
+\vspace{-0.5em}
+\begin{columns}
+\begin{column}[t]{0.48\textwidth}
+\textbf{Polynomial regression:}
+\begin{itemize}
+\item Basic tasks: regress polynomials (degree \(\leq 3\)) in 4 variables from examples. 
+\item Meta-mappings: transform polynomial by permuting variables, adding or multiplying constants, squaring. 
+\item Good zero-shot performance!
+\end{itemize}
+\begin{figure}[H]
+\includegraphics[width=0.7\textwidth]{../figures/poly/meta_results.png}
+\end{figure}
 \end{column}
+\begin{column}[t]{0.48\textwidth}
+\textbf{Simple card games:}
+\begin{itemize}
+\item Basic tasks: input is hand, make bet, get stochastic reward. A variety of games with different rules. 
+\item Meta-mappings: transform game by trying to lose, changing values of suits. 
+\item Good zero-shot performance!
+\end{itemize}
+\begin{figure}[H]
+\includegraphics[width=0.7\textwidth]{../figures/meta_mapping.png}
+\end{figure}
+\end{column}
+\end{columns}
+\end{block}
+\end{column}
+
+
 \begin{column}[t]{0.248\textwidth}
 \begin{block}{\huge Why \& prior work}
 \begin{itemize}
