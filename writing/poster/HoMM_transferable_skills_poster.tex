@@ -325,7 +325,7 @@ $\vdots$
 \begin{itemize}
 \item Basic tasks: input is hand, make bet, get stochastic reward. A variety of games with different rules. 
 \item Meta-mappings: transform game by trying to lose, changing values of suits. 
-\item Good zero-shot performance!
+\item Good performance in different hold-out conditions!
 \end{itemize}
 \begin{figure}[H]
 \includegraphics[width=0.7\textwidth]{../figures/meta_mapping.png}
@@ -335,11 +335,12 @@ $\vdots$
 \end{block}
 \end{column}
 
-
 \begin{column}[t]{0.248\textwidth}
 \begin{block}{\huge Why \& prior work}
+\vspace{-0.6em}
 \begin{itemize}
 \item Prior work has considered zero-shot task performance from language descriptions, with approaches that implicitly use prior task knowlege for the novel task.
+\item Other prior work has considered using prior task similarity, but not transformation-based approaches.
 \item However, transforming a task representation provides a richer and more explicit way to use prior knowledge.
 \item Probably because of this, meta-mapping offers better zero-shot performance than a baseline of performing the task from natural language alone.
 \item Meta-mapping thus offers a happy intermediate between meta-learning (which requires data on the new task), and zero-shot performance from language alone.
@@ -352,6 +353,19 @@ $\vdots$
 
 \end{block}
 \begin{block}{\huge Conclusions}
+\vspace{-0.6em}
+\begin{itemize}
+\item We propose \emph{meta-mappings}, a new perspective on zero-shot task performance via transformation of prior tasks. 
+\item We propose homoiconic meta-mapping architectures as a parsimonious implementation that exploits the analogy between meta-mappings and basic tasks. 
+\item We demonstrate the success of our approach, and show it outperforms a zero-shot baseline based on language descriptions alone. 
+\item Check out our paper for additional studies, including:
+    \begin{itemize}
+    \Large
+    \item Cueing meta-mappings from language.
+    \item Lesions and baselines, like an unshared \(Z\) or a non-hyper-network based approach. 
+    \item Applications to continual learning.
+    \end{itemize}
+\end{itemize}
 \end{block}
 \end{column}
 \end{columns}
