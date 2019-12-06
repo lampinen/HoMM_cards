@@ -12,14 +12,16 @@ library(tidyverse)
 
 ```{r}
 parent_dir = "."
-subdirs = c("results_for_humans_with_library_2", "results_for_humans_with_library_3",
+subdirs = c(#"results_for_humans_with_library_2", 
+            "results_for_humans_with_library_3", "results_for_humans_with_library_4",
             #"results_for_humans_with_library_persistent",  "results_for_humans_with_library_persistent_2", "results_for_humans_with_library_persistent_3",  "results_for_humans_with_library_persistent_4", 
             "results_for_humans_with_library_persistent_5",  "results_for_humans_with_library_persistent_6",
-            "results_for_humans_with_library_persistent_7", 
-            "results_for_humans_with_library_persistent_8", 
-            "results_for_humans_with_library_persistent_9"
+            #"results_for_humans_with_library_persistent_7", 
+            #"results_for_humans_with_library_persistent_8", 
+            "results_for_humans_with_library_persistent_9",
+            "results_for_humans_with_library_persistent_10"
             )
-num_runs = 3
+num_runs = 2
 ```
 
 ```{r}
@@ -153,3 +155,24 @@ selected_meta_true_d %>%
 
 ```
 
+
+This doesn't work particularly well either for non-persistent, either selecting on eval_other or on train_and_other.
+
+```{r}
+selected_meta_true_d_3 = meta_true_d %>%
+  filter(meta_task=="toggle_losers",
+         !grepl("persistent", run_type)) %>%
+  mutate(source_type=case_when(
+    base_task_toe == "example_is_train" ~ "train",
+    source == "game_straight_flush_l_0_bv_0_sr_0" ~ "eval_target",
+    T ~ "eval_other")) %>%
+  group_by(run_type, run, epoch, source_type) %>%
+  summarize(mean_loss=mean(loss)) %>%
+  ungroup() %>%
+  spread(source_type, mean_loss) %>%
+  mutate(train_and_other = train + eval_other) %>%
+  group_by(run_type, run) %>%
+  filter(train_and_other == max(train_and_other))
+selected_meta_true_d_3 %>%
+  arrange(desc(train_and_other))
+```
