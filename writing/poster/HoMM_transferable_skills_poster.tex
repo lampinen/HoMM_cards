@@ -35,17 +35,6 @@
 
 \setlength{\parskip}{0.5em}
 
-
-% The \author macro works with any number of authors. There are two
-% commands used to separate the names and addresses of multiple
-% authors: \And and \AND.
-%
-% Using \And between authors leaves it to LaTeX to determine where to
-% break the lines. Using \AND forces a line break at that point. So,
-% if LaTeX puts 3 of 4 authors names on the first line, and the last
-% on the second line, try using \AND instead of \And before the third
-% author name.
-
 \title{Zero-Shot Task Adaptation by Homoiconic Meta-mapping (HoMM)}
 \author{Andrew K. Lampinen \& James L. McClelland}
 \institute{Department of Psychology, Stanford University}
@@ -58,7 +47,7 @@
 
 \begin{column}[t]{0.248\textwidth}
 \begin{block}{\huge Intro: zero-shot adaptation}
-\vspace{-0.6em}
+\vspace{-0.4em}
 \begin{itemize}
 \item Humans can adapt zero-shot to novel tasks, based on their relationship to prior tasks.
 \item For example, if asked to alter our behavior on a game we have learned (like trying to lose or achieve some other goal), we can perform well on our first try.
@@ -68,30 +57,32 @@
 \end{itemize}
 \end{block}
 \begin{block}{\huge Meta-mapping}
-\vspace{-0.6em}
+\vspace{-0.4em}
 \begin{itemize}
 \item Consider a functional perspective. Basic tasks can be seen as functions mapping images to classes, or states to actions, or card hands to bets, etc.
 \item We suggest it's then useful to think of transformations over functions, that is, functions which take other functions as input and/or output.
-\item We call these higher-level functions \emph{meta-mappings}. They are functions which take basic functions as input and produce other basic functions as output.
-\item For example, we could have a try-to-lose function which takes as input a function that tries to win money at poker, and outputs a function which tries to lose money at poker.
-\item We suggest that meta-mappings are a useful way to think about human-like zero-shot adaptation.
+\item We call these higher-level functions \emph{meta-mappings}. They are functions that transform basic tasks. 
+\item For example, we could have a try-to-lose meta-mapping which takes as input a function that tries to win money at a card game, and outputs a function which tries to lose money at that game.
+\item We suggest that meta-mappings are a useful perspective on human-like zero-shot adaptation.
 \end{itemize}
 \end{block}
 \begin{block}{\huge Functional analogy}
-\vspace{-0.6em}
+\vspace{-0.5em}
 \begin{itemize}
 \item Meta-mappings can be learned in the same way that other functions are learned -- using a deep network to approximate the function.
-\item We learn a meta-mapping from a dataset of example (input function, output function) tuples, analogously to learning a basic task from example tuples of (image, label), or (hand, bet, reward). 
+\item We can learn a meta-mapping from a dataset of example (input function, output function) tuples, analogously to learning a basic task from example tuples of (image, label), or (hand, bet, reward).
+\item We use this analogy to propose a homoiconic architecture for meta-mapping.
 \end{itemize}
+\vspace{0.2em}
 \end{block}
 \end{column}
 
 \begin{column}[t]{0.496\textwidth}
-\begin{block}{\huge Homoiconic Meta-Mapping (HoMM) architectures}
+\begin{block}{\huge Homoiconic Meta-Mapping architectures}
 \vspace{-0.5em}
 \begin{columns}
 \begin{column}[t]{0.48\textwidth}
-\textbf{Basic tasks (meta-learning):}
+\textbf{Basic tasks (meta-learning, panel a):}
 \begin{itemize}
 \item We embed inputs and outputs into a shared latent space \(Z\). 
 \item We meta-learn a network \(\mathcal{M}\) to map a dataset of embedded example tuples \(\{(z^{ex}_{in}, z^{ex}_{out}), ...\}\) to an embedding for that task/function \(z^{func}\). 
@@ -101,17 +92,17 @@
 \end{itemize}
 \end{column}
 \begin{column}[t]{0.48\textwidth}
-\textbf{Meta-mappings (zero-shot task performance):}
+\textbf{Meta-mappings (zero-shot adaptation, b-c):}
 \begin{itemize}
-\item We exploit the analogy above to use \emph{the same meta-learning system} for meta-mappings.
+\item We exploit the analogy above to use \emph{the same meta-learning system} for meta-mappings (panel b).
 \item We pass a dataset of example function mappings \(\{(z^{func}_{in}, z^{func}_{out}\}\) through \(\mathcal{M}\) to produce a meta-mapping embedding \(z^{meta}\). 
 \item We parameterize \(F\) as before, and can pass a new function embedding through \(F\) to guess an embedding for a transformed task \(z^{func,pred}\).
-\item We can use \(z^{func,pred}\) to perform a transformed task zero-shot (or train to match a target).
-\item Parsimonious, same networks as basic meta-learning.
+\item \(z^{func,pred}\) can then be used to perform the transformed task zero-shot.
+\item This approach is parsimonious and homoiconic.
 \end{itemize}
 \end{column}
 \end{columns}
-
+\vspace{0.4em}
 \begin{figure}[H]
 \centering
 \normalsize
@@ -304,6 +295,7 @@ $\vdots$
 \end{tikzpicture}
 %\caption{The HoMM architecture allows for transformations at different levels of abstraction. (a) For basic meta-learning a dataset consisting of (input embedding, output embedding) tuples is processed by the meta-network \(\mathcal{M}\) to produce a function embedding \(z^{func}\), which is processed by the hyper network \(\mathcal{H}\) to parameterize a function \(F_{z^{func}}\), which attempts to compute the transformation on probe inputs (used to encourage the system to generalize). However, our approach goes beyond basic meta-learning. The function embedding \(z^{func}\) can then be seen as a single input or output at the next level of abstraction, when the same networks \(\mathcal{M}\) and \(\mathcal{H}\) are used to transform function embeddings based on examples of a meta-mapping (b). To evaluate meta-mapping performance, a probe embedding of a held-out function is transformed by the architecture to yield a predicted embedding for the transformed task. The performance of this predicted embedding is evaluated by moving back down a level of abstraction and evaluating on the actual target task (c). Because the function embedding is predicted by a transformation rather than from examples, new tasks can be performed zero-shot. (\(M\) and \(H\) are learnable deep networks, and $F_{z}$ is a deep network parameterized by $\mathcal{H}$ conditioned on function embedding \(z\). Input and output encoders/decoders are omitted for simplicity. See the text and Appendix \ref{app_model_details} for details.)} \label{architecture_inference_fig}
 \end{figure}
+\vspace{-0.7em}
 \end{block}
 
 \begin{block}{\huge Experiments}
@@ -312,9 +304,9 @@ $\vdots$
 \begin{column}[t]{0.48\textwidth}
 \textbf{Polynomial regression:}
 \begin{itemize}
-\item Basic tasks: regress polynomials (degree \(\leq 3\)) in 4 variables from examples. 
-\item Meta-mappings: transform polynomial by permuting variables, adding or multiplying constants, squaring. 
-\item Good zero-shot performance!
+\item Basic tasks: regress polynomials (degree \(\leq 2\)) in 4 variables from examples. 
+\item Meta-mappings: transform polynomial by permuting inputs, adding or multiplying constants, or squaring. 
+\item Good 0-shot results, even with held-out mappings!
 \end{itemize}
 \begin{figure}[H]
 \includegraphics[width=0.7\textwidth]{../figures/poly/meta_results.png}
@@ -324,8 +316,8 @@ $\vdots$
 \textbf{Simple card games:}
 \begin{itemize}
 \item Basic tasks: input is hand, make bet, get stochastic reward. A variety of games with different rules. 
-\item Meta-mappings: transform game by trying to lose, changing values of suits. 
-\item Good performance in different hold-out conditions!
+\item Meta-mappings: transform game by trying to lose, or changing values of suits. 
+\item Good performance, but depends on hold-outs!
 \end{itemize}
 \begin{figure}[H]
 \includegraphics[width=0.7\textwidth]{../figures/meta_mapping.png}
@@ -336,14 +328,14 @@ $\vdots$
 \end{column}
 
 \begin{column}[t]{0.248\textwidth}
-\begin{block}{\huge Why \& prior work}
+\begin{block}{\huge Prior work and our contribution\vspace{0.2em}}
 \vspace{-0.6em}
 \begin{itemize}
-\item Prior work has considered zero-shot task performance from language descriptions, with approaches that implicitly use prior task knowlege for the novel task.
-\item Other prior work has considered using prior task similarity, but not transformation-based approaches.
-\item However, transforming a task representation provides a richer and more explicit way to use prior knowledge.
-\item Probably because of this, meta-mapping offers better zero-shot performance than a baseline of performing the task from natural language alone.
-\item Meta-mapping thus offers a happy intermediate between meta-learning (which requires data on the new task), and zero-shot performance from language alone.
+\item Meta-learning \citep[e.g.][]{Vinyals2016, Finn2017a} allows performing new tasks from little data, but not zero-shot.
+\item Prior work has considered zero-shot task performance from language descriptions, see \citet{Xian2018}.
+\item Other prior work has considered using prior task similarity \citep[e.g.][]{Pal2019}, but has not used function-transformation approaches like ours.
+\item Transforming a task representation provides a richer and more explicit way to use prior task knowledge.
+\item Probably because of this, meta-mapping offers better zero-shot performance than a baseline of performing the task from natural language directly (see below).
 \end{itemize}
 \begin{figure}[H]
 \centering
@@ -352,20 +344,29 @@ $\vdots$
 \end{figure}
 
 \end{block}
-\begin{block}{\huge Conclusions}
+\begin{block}{\huge Conclusions\vspace{0.2em}}
 \vspace{-0.6em}
 \begin{itemize}
 \item We propose \emph{meta-mappings}, a new perspective on zero-shot task performance via transformation of prior tasks. 
 \item We propose homoiconic meta-mapping architectures as a parsimonious implementation that exploits the analogy between meta-mappings and basic tasks. 
-\item We demonstrate the success of our approach, and show it outperforms a zero-shot baseline based on language descriptions alone. 
+\item We demonstrate the success of our approach, and show it outperforms a zero-shot language baseline.\\[0.4em] 
 \item Check out our paper for additional studies, including:
     \begin{itemize}
-    \Large
-    \item Cueing meta-mappings from language.
-    \item Lesions and baselines, like an unshared \(Z\) or a non-hyper-network based approach. 
+    \large
+    \item Details on language cues and comparisons.
+    \item Lesions and baselines, like separate networks for basic-tasks and meta-mapping, and a non-hyper-network approach. 
     \item Applications to continual learning.
     \end{itemize}
 \end{itemize}
+\end{block}
+
+\begin{block}{\huge References\vspace{0.2em}}
+\vspace{-0.1em}
+{
+\scriptsize
+\bibliographystyle{plainnat}
+\bibliography{../arrr.bib}
+}
 \end{block}
 \end{column}
 \end{columns}
