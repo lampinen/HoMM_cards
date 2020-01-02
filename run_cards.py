@@ -11,7 +11,7 @@ import simple_card_games
 
 run_config = default_run_config.default_run_config
 run_config.update({
-    "output_dir": "results_for_humans_with_library_4/",
+    "output_dir": "presentable_results/basic/",
 
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
@@ -32,8 +32,8 @@ run_config.update({
                   "black_valuable": True, "suits_rule": True}], # will be removed
                                                                 # from base tasks
 
-    "init_learning_rate": 2e-4,
-    "init_meta_learning_rate": 1e-4,
+    "init_learning_rate": 1e-5,
+    "init_meta_learning_rate": 1e-5,
 
     "lr_decay": 0.85,
     "language_lr_decay": 0.8,
@@ -42,10 +42,13 @@ run_config.update({
     "lr_decays_every": 200,
     "min_learning_rate": 3e-8,
     "min_language_learning_rate": 1e-8,
-    "min_meta_learning_rate": 3e-7,
+    "min_meta_learning_rate": 3e-8,
 
-    "num_epochs": 500000,
-    "eval_every": 100,
+    "num_epochs": 100000,
+    "eval_every": 20,
+
+    "num_runs": 5,
+    "run_offset": 0
 })
 
 architecture_config = default_architecture_config.default_architecture_config
@@ -60,15 +63,23 @@ architecture_config.update({
     "optimizer": "RMSProp",
 
     "meta_batch_size": 768,
+
+    "z_dim": 256,
+    "F_num_hidden_layers": 0,
+
+#    "F_weight_normalization": True,
+#    "F_wn_strategy": "standard",
+
+    "train_drop_prob": 0.,
 })
-if True:  # enable for persistent reps
+if False:  # enable for persistent reps
     architecture_config.update({
         "persistent_task_reps": True,
         "combined_emb_guess_weight": "varied",
-        "emb_match_loss_weight": 1.,
+        "emb_match_loss_weight": 0.2,
     })
     run_config.update({
-        "output_dir": "results_for_humans_with_library_persistent_10/",
+        "output_dir": run_config["output_dir"][:-1] + "_persistent/", 
     })
 
 class cards_HoMM_model(HoMM_model.HoMM_model):
@@ -266,7 +277,7 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
     def base_eval(self, task, train_or_eval):
         feed_dict = self.build_feed_dict(task, call_type="base_cached_eval")
-        fetches = [self.total_base_loss, self.base_output_softmax]
+        fetches = [self.total_base_cached_emb_loss, self.base_cached_emb_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
         rewards = self.reward_eval_helper(task, res[1], inputs)
@@ -285,7 +296,7 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
 
 ## stuff
-for run_i in range(run_config["num_runs"]):
+for run_i in range(run_config["run_offset"], run_config["run_offset"]+run_config["num_runs"]):
     np.random.seed(run_i)
     tf.set_random_seed(run_i)
     run_config["this_run"] = run_i
