@@ -41,7 +41,7 @@ run_config.update({
 
     "lr_decays_every": 200,
     "min_learning_rate": 3e-8,
-    "min_language_learning_rate": 1e-8,
+    "min_language_learning_rate": 3e-8,
     "min_meta_learning_rate": 3e-8,
 
     "num_epochs": 100000,
@@ -81,6 +81,22 @@ if False:  # enable for persistent reps
     run_config.update({
         "output_dir": run_config["output_dir"][:-1] + "_persistent/", 
     })
+
+if True:  # enable for language baseline
+    run_config.update({
+        "train_language_base": True,
+        "train_base": False,
+        "train_meta": False,
+
+        "vocab": ["game", "highcard", "pairsandhigh", "match", "sumunder", "straightflush"] + ["l", "bv", "sr"] + ["0", "1"],
+
+        "output_dir": run_config["output_dir"] + "language/",  # subfolder
+    })
+
+    architecture_config.update({
+        "max_sentence_len": 8,
+    })
+
 
 class cards_HoMM_model(HoMM_model.HoMM_model):
     def __init__(self, run_config=None):
@@ -222,6 +238,10 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         self.base_cached_emb_output_softmax = tf.nn.softmax(
             self.run_config["softmax_beta"] * self.base_cached_emb_unmasked_output)
 
+        if self.run_config["train_language_base"]:
+            self.base_lang_output_softmax = tf.nn.softmax(
+                self.run_config["softmax_beta"] * self.base_lang_unmasked_output)
+
     def fill_buffers(self, num_data_points=1024):
         """Add new "experiences" to memory buffers."""
         self.play_games(num_turns = num_data_points,
@@ -293,6 +313,28 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         inputs = feed_dict[self.base_input_ph]
         rewards = self.reward_eval_helper(task, res[0], inputs)
         return [rewards]
+
+    def base_language_eval(self, task, train_or_eval):
+        feed_dict = self.build_feed_dict(task, call_type="base_lang_eval")
+        fetches = [self.base_lang_output_softmax]
+        res = self.sess.run(fetches, feed_dict=feed_dict)
+        inputs = feed_dict[self.base_input_ph]
+        rewards = self.reward_eval_helper(task, res[0], inputs)
+        name = str(task)
+        return [name + "_rewards:" + train_or_eval], [rewards] 
+
+    def intify_task(self, task_name):  # note: only base tasks implemented at present
+        words = task_name.split("_")
+        if words[1] == "high":
+            words = ["game", "highcard"] + words[3:]
+        elif words[1] == "straight":
+            words = ["game", "straightflush"] + words[3:]
+        elif words[1] == "sum":
+            words = ["game", "sumunder"] + words[3:]
+        elif words[1] == "pairs":
+            words = ["game", "pairsandhigh"] + words[4:]
+
+        return [self.vocab_dict[x] for x in words]
 
 
 ## stuff
