@@ -11,7 +11,7 @@ import simple_card_games
 
 run_config = default_run_config.default_run_config
 run_config.update({
-    "output_dir": "presentable_results/basic/",
+    "output_dir": "presentable_results/exact_eval/",
 
     "game_types": ["high_card","straight_flush",  "match", "pairs_and_high", "sum_under"],
     "option_names": ["suits_rule", "losers", "black_valuable"],
@@ -82,7 +82,7 @@ if False:  # enable for persistent reps
         "output_dir": run_config["output_dir"][:-1] + "_persistent/", 
     })
 
-if True:  # enable for language baseline
+if False:  # enable for language baseline
     run_config.update({
         "train_language_base": True,
         "train_base": False,
@@ -136,6 +136,8 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         self.base_eval_tasks = [simple_card_games.game_from_def(t) for t in self.base_eval_tasks]
 
         self.game_str_to_task = {str(t): t for t in self.base_train_tasks + self.base_eval_tasks}
+
+        self.all_possible_hands = np.array([self.encode_hand(h) for h in self.base_train_tasks[0].hands], dtype=np.float32)
 
 
     def fill_buffers(self, num_data_points=1024):
@@ -274,8 +276,9 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
         actions = [np.argmax(act_probs[i, :],
                              axis=-1) for i in range(len(act_probs))]
         bets = [self.bets[a] for a in actions]
-        rs = [game.play(hands[i], self.bets[a]) for i, a in enumerate(actions)]
-        return np.mean(rs)
+        bet_dict = {h: b for (h, b) in zip(hands, bets)}
+        #rs = [game.play(hands[i], self.bets[a]) for i, a in enumerate(actions)]
+        return game.compute_expected_return(max_bet=1., policy=bet_dict, ties="nobody_wins") 
 
     def build_feed_dict(self, task, lr=None, fed_embedding=None,
                         call_type="base_standard_train"):
@@ -292,36 +295,39 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
             targets, target_mask = self._outcomes_to_targets(outcomes)
             feed_dict[self.base_target_ph] = targets 
             feed_dict[self.base_target_mask_ph] = target_mask
+            if train_or_eval == "eval" and call_type != "standard":  # eval on all possible hands
+                feed_dict[self.base_input_ph] = self.all_possible_hands 
 
         return feed_dict
 
     def base_eval(self, task, train_or_eval):
         feed_dict = self.build_feed_dict(task, call_type="base_cached_eval")
-        fetches = [self.total_base_cached_emb_loss, self.base_cached_emb_output_softmax]
+        fetches = [self.base_cached_emb_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
-        rewards = self.reward_eval_helper(task, res[1], inputs)
+        expected_rewards = self.reward_eval_helper(task, res[0], inputs)
         name = str(task)
-        return ([name + "_loss:" + train_or_eval, 
-                 name + "_rewards:" + train_or_eval],
-                [res[0], rewards]) 
+        return ([name + "_expected_rewards:" + train_or_eval],
+                [expected_rewards]) 
 
     def base_embedding_eval(self, embedding, task):
         feed_dict = self.build_feed_dict(task, fed_embedding=embedding, call_type="base_fed_eval")
         fetches = [self.base_fed_emb_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
-        rewards = self.reward_eval_helper(task, res[0], inputs)
-        return [rewards]
+        expected_rewards = self.reward_eval_helper(task, res[0], inputs)
+        name = str(task)
+        return [expected_rewards] 
 
     def base_language_eval(self, task, train_or_eval):
         feed_dict = self.build_feed_dict(task, call_type="base_lang_eval")
         fetches = [self.base_lang_output_softmax]
         res = self.sess.run(fetches, feed_dict=feed_dict)
         inputs = feed_dict[self.base_input_ph]
-        rewards = self.reward_eval_helper(task, res[0], inputs)
+        expected_rewards = self.reward_eval_helper(task, res[0], inputs)
         name = str(task)
-        return [name + "_rewards:" + train_or_eval], [rewards] 
+        return ([name + "_expected_rewards:" + train_or_eval],
+                [expected_rewards]) 
 
     def intify_task(self, task_name):  # note: only base tasks implemented at present
         words = task_name.split("_")
