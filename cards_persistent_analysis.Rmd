@@ -11,17 +11,11 @@ library(tidyverse)
 # data loading
 
 ```{r}
-parent_dir = "."
-subdirs = c(#"results_for_humans_with_library_2", 
-            "results_for_humans_with_library_3", "results_for_humans_with_library_4",
-            #"results_for_humans_with_library_persistent",  "results_for_humans_with_library_persistent_2", "results_for_humans_with_library_persistent_3",  "results_for_humans_with_library_persistent_4", 
-            "results_for_humans_with_library_persistent_5",  "results_for_humans_with_library_persistent_6",
-            #"results_for_humans_with_library_persistent_7", 
-            #"results_for_humans_with_library_persistent_8", 
-            "results_for_humans_with_library_persistent_9",
-            "results_for_humans_with_library_persistent_10"
-            )
-num_runs = 2
+parent_dir = "./presentable_results"
+subdirs = c("exact_eval")
+language_subdirs = c("exact_eval/language")
+
+num_runs = 5
 ```
 
 ```{r}
@@ -38,7 +32,8 @@ read_config = function(config_file) {
 
 ```{r}
 load_d = function(results_dir, result_subdirs, num_runs, file_type) {
-  d = data.frame()
+  d = replicate(num_runs * length(result_subdirs), data.frame())
+  index = 1
   for (run_i in 0:(num_runs-1)) {
     for (result_subdir in result_subdirs) {
       filename = sprintf("%s/%s/run%i_%s.csv", results_dir, result_subdir, run_i, file_type)
@@ -57,11 +52,11 @@ load_d = function(results_dir, result_subdirs, num_runs, file_type) {
       this_d = this_d %>%
         mutate(run = run_i,
                run_type = result_subdir)
-      d = d %>%
-        bind_rows(this_d)
+      d[[index]] = this_d
+      index = index + 1
     }
-    
   }
+  d = bind_rows(d)
   return(d)
 }
 ```
@@ -69,6 +64,7 @@ load_d = function(results_dir, result_subdirs, num_runs, file_type) {
 ```{r}
 config_d = load_d(parent_dir, subdirs, num_runs, "run_config")
 loss_d = load_d(parent_dir, subdirs, num_runs, "losses")
+lang_d = load_d(parent_dir, language_subdirs, num_runs, "language_losses")
 meta_true_d = load_d(parent_dir, subdirs, num_runs, "meta_true_losses")
 ```
 
@@ -80,11 +76,19 @@ loss_d = loss_d %>%
   gather(task, loss, -epoch, -run, -run_type) %>%
   mutate(meta = grepl("is|toggle", task)) %>%
   filter(!meta, grepl("rewards", task)) %>%
-  mutate(task = sub("_rewards", "", task),
+  mutate(task = sub("_expected_rewards", "", task),
          train_or_eval = ifelse(grepl("straight_flush_l_1", task), "eval", "train"))
   
 ```
 
+```{r}
+lang_d = lang_d %>%
+  filter(epoch %% 100 == 0) %>%
+  gather(task, loss, -epoch, -run, -run_type) %>%
+  separate(task, c("task", "train_or_eval"), ":") %>%
+  mutate(task = sub("_expected_rewards", "", task))
+  
+```
 
 ```{r}
 meta_true_d = meta_true_d %>%
@@ -105,6 +109,14 @@ ggplot(loss_d,
   geom_line(stat="summary",
             fun.y="mean") +
   facet_grid(run_type ~ meta)
+```
+```{r}
+ggplot(loss_d %>%
+         filter(task == "game_straight_flush_l_0_bv_0_sr_0:train"),
+       aes(x=epoch, y=loss, color=train_or_eval)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run_type ~ run)
 ```
 
 ```{r}
@@ -183,6 +195,7 @@ source_task_loss_d = loss_d %>%
   rename(source_task_base_loss = loss)
 
 selected_meta_true_d_3 = meta_true_d %>%
+  filter(epoch > 5000, epoch < 50000) %>%
   filter(meta_task=="toggle_losers") %>%
   mutate(source_type=case_when(
     base_task_toe == "example_is_train" ~ "train",
@@ -199,3 +212,83 @@ selected_meta_true_d_3 = meta_true_d %>%
 selected_meta_true_d_3 %>%
   arrange(desc(source_loss_and_other))
 ```
+
+```{r}
+# window_size = 1000
+# 
+# sliding_window_selected_meta_true_d = meta_true_d %>%
+#   filter(epoch < 50000) %>%
+#   filter(meta_task=="toggle_losers") %>%
+#   mutate(source_type=case_when(
+#     base_task_toe == "example_is_train" ~ "train",
+#     source == "game_straight_flush_l_0_bv_0_sr_0" ~ "eval_target",
+#     T ~ "eval_other")) %>%
+#   group_by(run_type, run, epoch, source_type) %>%
+#   summarize(mean_loss=mean(loss)) %>%
+#   ungroup() %>%
+#   spread(source_type, mean_loss) %>%
+#   left_join(source_task_loss_d) %>%
+#   mutate(source_loss_and_other = source_task_base_loss + eval_other) %>%
+#   mutate(window = epoch %/% window_size) %>%
+#   group_by(run_type, run, window) %>%
+#   summarize(source_loss = mean(source_task_base_loss), eval_other = mean(eval_other), source_loss_and_other = mean(source_loss_and_other), eval_target = mean(eval_target)) %>%
+#   ungroup() %>%
+#   group_by(run_type, run) %>%
+#   filter(source_loss_and_other == max(source_loss_and_other))
+# sliding_window_selected_meta_true_d %>%
+#   arrange(desc(source_loss_and_other))
+```
+
+# language baselines
+
+```{r}
+ggplot(lang_d,
+       aes(x=epoch, y=loss, color=train_or_eval)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run_type ~ run)
+```
+
+
+Equivalent selection for the language baselines to that used above:
+```{r}
+selected_lang_d = lang_d %>%
+  filter(epoch > 5000,
+         epoch < 50000) %>%
+  mutate(task_type=case_when(
+    task == "game_straight_flush_l_0_bv_0_sr_0" ~ "source",
+    task == "game_straight_flush_l_1_bv_0_sr_0" ~ "eval_target",
+    train_or_eval == "eval" ~ "eval_other",
+    T ~ "train_other")) %>%
+  group_by(run_type, run, epoch, task_type) %>%
+  summarize(mean_loss=mean(loss)) %>%
+  ungroup() %>%
+  spread(task_type, mean_loss) %>%
+  mutate(source_loss_and_other = source + eval_other) %>%
+  group_by(run_type, run) %>%
+  filter(source_loss_and_other == max(source_loss_and_other))
+selected_lang_d %>%
+  arrange(desc(source_loss_and_other))
+```
+
+# data for figure
+
+```{r}
+diss_figure_data = bind_rows(
+  selected_lang_d %>%
+    ungroup() %>%
+    select(run, source, eval_target) %>%
+    mutate(result_type = "Language baseline"),
+  selected_meta_true_d_3 %>%
+    ungroup() %>%
+    rename(source=source_task_base_loss) %>%
+    select(run, source, eval_target) %>%
+    mutate(result_type = "HoMM")) %>%
+  gather(task, expected_reward, source, eval_target) %>%
+  mutate(expected_reward = expected_reward / max(expected_reward))  # different scalings
+```
+
+```{r}
+#write_csv()
+```
+
