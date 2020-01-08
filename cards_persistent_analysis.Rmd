@@ -284,11 +284,10 @@ diss_figure_data = bind_rows(
     rename(source=source_task_base_loss) %>%
     select(run, source, eval_target) %>%
     mutate(result_type = "HoMM")) %>%
-  gather(task, expected_reward, source, eval_target) %>%
-  mutate(expected_reward = expected_reward / max(expected_reward))  # different scalings
+  gather(task, expected_reward, source, eval_target)
 ```
 
 ```{r}
-#write_csv()
+write_csv(diss_figure_data, "~/Documents/grad/res/psych/cards/analysis/HoMM_data.csv")
 ```
 
