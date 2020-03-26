@@ -13,7 +13,7 @@ library(tidyverse)
 ```{r}
 parent_dir = "./presentable_results"
 subdirs = c("exact_eval")
-language_subdirs = c("exact_eval/language")
+language_subdirs = c("exact_eval/language", "exact_eval/tcnh_more_complex/language")
 
 num_runs = 5
 ```
@@ -266,7 +266,8 @@ selected_lang_d = lang_d %>%
   spread(task_type, mean_loss) %>%
   mutate(source_loss_and_other = source + eval_other) %>%
   group_by(run_type, run) %>%
-  filter(source_loss_and_other == max(source_loss_and_other))
+  filter(source_loss_and_other == max(source_loss_and_other)) %>%
+  slice(1) # take first where multiple minima
 selected_lang_d %>%
   arrange(desc(source_loss_and_other))
 ```
@@ -276,9 +277,15 @@ selected_lang_d %>%
 ```{r}
 diss_figure_data = bind_rows(
   selected_lang_d %>%
+    filter(run_type == "exact_eval/language") %>%
     ungroup() %>%
     select(run, source, eval_target) %>%
     mutate(result_type = "Language baseline"),
+  selected_lang_d %>%
+    filter(run_type == "exact_eval/tcnh_more_complex/language") %>%
+    ungroup() %>%
+    select(run, source, eval_target) %>%
+    mutate(result_type = "Language baseline\n(task-conditioned)"),
   selected_meta_true_d_3 %>%
     ungroup() %>%
     rename(source=source_task_base_loss) %>%
