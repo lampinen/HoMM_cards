@@ -19,6 +19,8 @@ run_config.update({
     "losers": [True, False],
     "black_valuable": [True, False],
 
+    "metaclass_lesion": False,  # If True, don't train meta-classifications 
+
     "softmax_beta": 8,
 
     "bets": [0, 1, 2],
@@ -44,11 +46,11 @@ run_config.update({
     "min_language_learning_rate": 3e-8,
     "min_meta_learning_rate": 3e-8,
 
-    "num_epochs": 100000,
+    "num_epochs": 50000,
     "eval_every": 20,
 
-    "num_runs": 5,
-    "run_offset": 0
+    "num_runs": 1,
+    "run_offset": 4
 })
 
 architecture_config = default_architecture_config.default_architecture_config
@@ -82,6 +84,15 @@ if False:  # enable for persistent reps
         "output_dir": run_config["output_dir"][:-1] + "_persistent/", 
     })
 
+if False:  # enable for task-conditioned
+    architecture_config.update({
+        "task_conditioned_not_hyper": True,
+        "F_num_hidden_layers": 3,
+    })
+    run_config.update({
+        "output_dir": run_config["output_dir"] + "tcnh_more_complex/", 
+    })
+
 if False:  # enable for language baseline
     run_config.update({
         "train_language_base": True,
@@ -96,6 +107,14 @@ if False:  # enable for language baseline
     architecture_config.update({
         "max_sentence_len": 8,
     })
+
+if True:  # enable for meta-class lesion
+    run_config.update({
+        "metaclass_lesion": True,
+        "output_dir": run_config["output_dir"] + "metaclass_lesion/", 
+    })
+    
+
 
 
 class cards_HoMM_model(HoMM_model.HoMM_model):
@@ -117,7 +136,10 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
 
         # set up the meta tasks
-        self.meta_class_train_tasks = ["is_" + g for g in run_config["game_types"]] + ["is_" + o for o in run_config["option_names"]] 
+        if run_config["metaclass_lesion"]: 
+            self.meta_class_train_tasks = []
+        else:
+            self.meta_class_train_tasks = ["is_" + g for g in run_config["game_types"]] + ["is_" + o for o in run_config["option_names"]] 
         self.meta_class_eval_tasks = [] 
 
         self.meta_map_train_tasks = ["toggle_" + o for o in run_config["option_names"]] 
