@@ -1,5 +1,5 @@
 ---
-title: "Cards persistent analysis"
+title: "Cards model analysis"
 author: "Andrew Lampinen"
 output: html_document
 ---
@@ -12,7 +12,7 @@ library(tidyverse)
 
 ```{r}
 parent_dir = "./presentable_results"
-subdirs = c("exact_eval")
+subdirs = c("exact_eval", "exact_eval/metaclass_lesion")
 language_subdirs = c("exact_eval/language", "exact_eval/tcnh_more_complex/language")
 
 num_runs = 5
@@ -208,7 +208,8 @@ selected_meta_true_d_3 = meta_true_d %>%
   left_join(source_task_loss_d) %>%
   mutate(source_loss_and_other = source_task_base_loss + eval_other) %>%
   group_by(run_type, run) %>%
-  filter(source_loss_and_other == max(source_loss_and_other))
+  filter(source_loss_and_other == max(source_loss_and_other)) %>%
+  slice(1) # take first where multiple minima
 selected_meta_true_d_3 %>%
   arrange(desc(source_loss_and_other))
 ```
@@ -288,6 +289,13 @@ diss_figure_data = bind_rows(
     mutate(result_type = "Language baseline\n(task-conditioned)"),
   selected_meta_true_d_3 %>%
     ungroup() %>%
+    filter(run_type == "exact_eval/metaclass_lesion") %>%
+    rename(source=source_task_base_loss) %>%
+    select(run, source, eval_target) %>%
+    mutate(result_type = "Meta-class lesion"),
+  selected_meta_true_d_3 %>%
+    ungroup() %>%
+    filter(run_type == "exact_eval") %>%
     rename(source=source_task_base_loss) %>%
     select(run, source, eval_target) %>%
     mutate(result_type = "HoMM")) %>%
