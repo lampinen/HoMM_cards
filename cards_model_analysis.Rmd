@@ -306,3 +306,50 @@ diss_figure_data = bind_rows(
 write_csv(diss_figure_data, "~/Documents/grad/res/psych/cards/analysis/HoMM_data.csv")
 ```
 
+## Basic meta-learning plot
+```{r}
+theme_set(theme_classic())
+```
+ 
+
+```{r}
+summarized_loss_d = loss_d %>%
+  filter(run_type == "exact_eval",
+         !meta) %>%
+  group_by(run, epoch, train_or_eval) %>%
+  summarize(loss = mean(loss, na.rm=T) / 0.53)
+```
+
+
+```{r}
+ggplot(summarized_loss_d,
+       aes(x=epoch, y=loss, color=train_or_eval)) +
+  geom_line(aes(group=interaction(run, train_or_eval)),
+            alpha=0.2) +
+  geom_line(stat="summary",
+            fun.y="mean",
+            size=1) +
+  scale_color_manual(breaks=c("train", "eval"), 
+                     labels=c("Trained\ngames", "Held-out\ngames"),
+                     values=c("#4d9221", "#c51b7d")) +
+  labs(y="Average meta-learning rewards\n(% of optimal)", x="Epoch") +
+  scale_y_continuous(breaks=c(0, 0.5, 1), labels=c("0%", "50%", "100%")) +
+  guides(color=guide_legend(title=NULL)) +
+  theme(legend.position=c(0.8, 0.25),
+        legend.key.size = unit(1.5, "lines"))
+
+ggsave("../metamapping_paper/figures/basic_meta_learning_cards.png", width=4, height=3)
+ggsave("../../psych/dissertation/3-human-adaptation/figures/basic_meta_learning_cards.png", width=5, height=3)
+```
+
+```{r}
+set.seed(0)  # reproducibility
+summarized_loss_d %>%
+  filter(epoch %in% c(0, 5000)) %>%
+  group_by(train_or_eval, epoch) %>%
+  do(results=mean_cl_boot(.$loss, na.rm=T)) %>%
+  mutate(mean=results$y,
+         CIlow=results$ymin,
+         CIhigh=results$ymax)
+```
+
