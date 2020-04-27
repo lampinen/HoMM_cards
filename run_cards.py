@@ -84,6 +84,14 @@ if False:  # enable for persistent reps
         "output_dir": run_config["output_dir"][:-1] + "_persistent/", 
     })
 
+if False:  # enable for nonhomiconic, after ensuring HoMM is on correct branch 
+    architecture_config.update({
+        "nonhomoiconic": True,
+    })
+    run_config.update({
+        "output_dir": run_config["output_dir"] + "nonhomoiconic/",
+    })
+
 if False:  # enable for task-conditioned
     architecture_config.update({
         "task_conditioned_not_hyper": True,
@@ -108,7 +116,7 @@ if False:  # enable for language baseline
         "max_sentence_len": 8,
     })
 
-if True:  # enable for meta-class lesion
+if False:  # enable for meta-class lesion
     run_config.update({
         "metaclass_lesion": True,
         "output_dir": run_config["output_dir"] + "metaclass_lesion/", 
