@@ -12,7 +12,7 @@ library(tidyverse)
 
 ```{r}
 parent_dir = "./presentable_results"
-subdirs = c("exact_eval", "exact_eval/metaclass_lesion")
+subdirs = c("exact_eval", "exact_eval/metaclass_lesion", "exact_eval/nonhomoiconic")
 language_subdirs = c("exact_eval/language", "exact_eval/tcnh_more_complex/language")
 
 num_runs = 5
@@ -293,6 +293,12 @@ diss_figure_data = bind_rows(
     rename(source=source_task_base_loss) %>%
     select(run, source, eval_target) %>%
     mutate(result_type = "Meta-class lesion"),
+  selected_meta_true_d_3 %>%
+    ungroup() %>%
+    filter(run_type == "exact_eval/nonhomoiconic") %>%
+    rename(source=source_task_base_loss) %>%
+    select(run, source, eval_target) %>%
+    mutate(result_type = "Nonhomoiconic"),
   selected_meta_true_d_3 %>%
     ungroup() %>%
     filter(run_type == "exact_eval") %>%
