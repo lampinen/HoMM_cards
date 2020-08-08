@@ -50,7 +50,7 @@ run_config.update({
     "eval_every": 20,
 
     "num_runs": 1,
-    "run_offset": 4
+    "run_offset": 0
 })
 
 architecture_config = default_architecture_config.default_architecture_config
@@ -116,13 +116,27 @@ if False:  # enable for language baseline
         "max_sentence_len": 8,
     })
 
+if False:  # enable for language base + meta
+    run_config.update({
+        "train_language_base": True,
+        "train_language_meta": True,
+        "train_base": False,
+        "train_meta": False,
+
+        "vocab": ["game", "highcard", "pairsandhigh", "match", "sumunder", "straightflush"] + ["l", "bv", "sr"] + ["0", "1"] + ["toggle", "is"] + ["<PAD>"],
+
+        "output_dir": run_config["output_dir"] + "language_meta/",  # subfolder
+    })
+
+    architecture_config.update({
+        "max_sentence_len": 8,
+    })
+
 if False:  # enable for meta-class lesion
     run_config.update({
         "metaclass_lesion": True,
         "output_dir": run_config["output_dir"] + "metaclass_lesion/", 
     })
-    
-
 
 
 class cards_HoMM_model(HoMM_model.HoMM_model):
@@ -361,14 +375,38 @@ class cards_HoMM_model(HoMM_model.HoMM_model):
 
     def intify_task(self, task_name):  # note: only base tasks implemented at present
         words = task_name.split("_")
-        if words[1] == "high":
-            words = ["game", "highcard"] + words[3:]
-        elif words[1] == "straight":
-            words = ["game", "straightflush"] + words[3:]
-        elif words[1] == "sum":
-            words = ["game", "sumunder"] + words[3:]
-        elif words[1] == "pairs":
-            words = ["game", "pairsandhigh"] + words[4:]
+        if words[0] in ["is", "toggle"]:
+            this_words = [words[0]]
+            if words[1] == "high":
+                this_words += ["highcard"]
+            elif words[1] == "match":
+                this_words += ["match"]
+            elif words[1] == "straight":
+                this_words += ["straightflush"]
+            elif words[1] == "sum":
+                this_words += ["sumunder"]
+            elif words[1] == "pairs":
+                this_words += ["pairsandhigh"]
+            elif words[1] == "losers":
+                this_words += ["l"]
+            elif words[1] == "black":
+                this_words += ["bv"]
+            elif words[1] == "suits":
+                this_words += ["sr"]
+            else: 
+                raise ValueError("Unrecognized task name: {}, {}".format(task_name, words))
+
+            words = this_words + ["<PAD>"] * (self.architecture_config["max_sentence_len"] - len(this_words))
+
+        else:  # base task
+            if words[1] == "high":
+                words = ["game", "highcard"] + words[3:]
+            elif words[1] == "straight":
+                words = ["game", "straightflush"] + words[3:]
+            elif words[1] == "sum":
+                words = ["game", "sumunder"] + words[3:]
+            elif words[1] == "pairs":
+                words = ["game", "pairsandhigh"] + words[4:]
 
         return [self.vocab_dict[x] for x in words]
 
