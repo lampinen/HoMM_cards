@@ -14,6 +14,7 @@ library(tidyverse)
 parent_dir = "./presentable_results"
 subdirs = c("exact_eval", "exact_eval/metaclass_lesion", "exact_eval/nonhomoiconic")
 language_subdirs = c("exact_eval/language", "exact_eval/tcnh_more_complex/language")
+language_meta_subdirs = c("exact_eval/language_meta", "exact_eval/language_meta_2", "exact_eval/language_meta_3", "exact_eval/language_meta_4")
 
 num_runs = 5
 ```
@@ -66,6 +67,7 @@ config_d = load_d(parent_dir, subdirs, num_runs, "run_config")
 loss_d = load_d(parent_dir, subdirs, num_runs, "losses")
 lang_d = load_d(parent_dir, language_subdirs, num_runs, "language_losses")
 meta_true_d = load_d(parent_dir, subdirs, num_runs, "meta_true_losses")
+lang_meta_true_d = load_d(parent_dir, language_meta_subdirs, num_runs, "language_meta_true_losses")
 ```
 
 # some manipulation
@@ -92,6 +94,14 @@ lang_d = lang_d %>%
 
 ```{r}
 meta_true_d = meta_true_d %>%
+  filter(epoch %% 100 == 0) %>%
+  gather(task, loss, -epoch, -run, -run_type) %>%
+  separate(task, c("meta_task", "mapping_toe", "base_task_toe", "source", "target"), ":|->")
+  
+```
+
+```{r}
+lang_meta_true_d = lang_meta_true_d %>%
   filter(epoch %% 100 == 0) %>%
   gather(task, loss, -epoch, -run, -run_type) %>%
   separate(task, c("meta_task", "mapping_toe", "base_task_toe", "source", "target"), ":|->")
@@ -359,3 +369,24 @@ summarized_loss_d %>%
          CIhigh=results$ymax)
 ```
 
+# language meta
+
+
+```{r}
+ggplot(lang_meta_true_d %>% 
+         filter(meta_task == "toggle_losers"),
+       aes(x=epoch, y=loss, color=base_task_toe)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run_type ~ run)
+```
+
+```{r}
+ggplot(lang_meta_true_d %>% 
+         filter(meta_task == "toggle_losers",
+                source == "game_straight_flush_l_0_bv_0_sr_0"),
+       aes(x=epoch, y=loss, color=base_task_toe)) +
+  geom_line(stat="summary",
+            fun.y="mean") +
+  facet_grid(run_type ~ run)
+```
